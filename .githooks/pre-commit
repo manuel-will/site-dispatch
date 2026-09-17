@@ -1,0 +1,8 @@
+#!/bin/sh
+# Secret scan on the staged changes. Fails closed: no gitleaks, no commit.
+# Enable once per clone: git config core.hooksPath .githooks
+if ! command -v gitleaks >/dev/null 2>&1; then
+	echo "pre-commit: gitleaks not found, commit refused. Install it (winget install Gitleaks.Gitleaks)." >&2
+	exit 1
+fi
+exec gitleaks git --pre-commit --staged --redact --no-banner

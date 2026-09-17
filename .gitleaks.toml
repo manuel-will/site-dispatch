@@ -1,0 +1,14 @@
+# Default rules, plus an allowlist of the exact canary values published in PROTOCOL.md.
+# Allowlisted by value, never by path: a real secret under tests/ is still caught.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Canary values of the PROTOCOL.md test vectors (not secrets, never used live)"
+regexTarget = "secret"
+regexes = [
+	'''^ca705a03af3a0c475a33d4c8b80996b9cbcf38ca0f2309a7eca6e6e026b1ce4b$''',
+	'''^e66d2a2e846dd6ff2986231204df27c9d9df8f02c7128ce982ffa16b801f3ddf$''',
+	'''^caaaaa00caaaaa00caaaaa00caaaaa00caaaaa00caaaaa00caaaaa00caaaaa00$''',
+	'''^canary-master-key-do-not-use-0123456789abcdef0123456789abcdef$''',
+]

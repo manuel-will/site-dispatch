@@ -1,0 +1,15 @@
+{
+  "note": "Canary values, not secrets. Generated for PROTOCOL.md, never used on a live system.",
+  "master_key": "canary-master-key-do-not-use-0123456789abcdef0123456789abcdef",
+  "website_id": "00000000-0000-4000-8000-000000000001",
+  "key_version": 1,
+  "key_input": "00000000-0000-4000-8000-000000000001:1",
+  "site_key": "ca705a03af3a0c475a33d4c8b80996b9cbcf38ca0f2309a7eca6e6e026b1ce4b",
+  "body_sha256": "77a28481015fd8e88de5a1668ce0bacf2462b05423ecf90d0171f7d4b0b0b3ec",
+  "signature_header": "sha256=7d61bd1b0d681d85d9d5cd635a615c57507ab6f3d8db2d68e4bc41f7f5860196",
+  "registry_base_url": "https://example.com",
+  "enroll_secret": "caaaaa00caaaaa00caaaaa00caaaaa00caaaaa00caaaaa00caaaaa00caaaaa00",
+  "enroll_secret_hash": "e66d2a2e846dd6ff2986231204df27c9d9df8f02c7128ce982ffa16b801f3ddf",
+  "body_file": "report-body.json",
+  "body_bytes": 524
+}
