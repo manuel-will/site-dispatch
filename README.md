@@ -14,6 +14,9 @@ server versions) to a server you connect it to. No inbound endpoints, no remote 
 git config core.hooksPath .githooks    # once per clone: gitleaks runs before every commit
 composer install
 composer vectors                       # recomputes the test vectors from PROTOCOL.md
+composer test                          # PHPUnit, pure functions without WordPress
+composer stan                          # PHPStan level max on includes/
+composer cs                            # PHPCS with the WordPress rules
 ```
 
 Needs PHP 7.4 or newer with the `sodium` extension, and [gitleaks](https://github.com/gitleaks/gitleaks)
