@@ -6,3 +6,68 @@
  *
  * @package Site_Dispatch
  */
+
+/**
+ * Fixed values of the update contract. None of them can be changed at run time.
+ */
+const SITE_DISPATCH_SLUG               = 'site-dispatch';
+const SITE_DISPATCH_SIG_NAMESPACE      = 'site-dispatch-update';
+const SITE_DISPATCH_MANIFEST_MAX_BYTES = 8192;
+const SITE_DISPATCH_VERSION_PATTERN    = '/^[0-9]+\.[0-9]+\.[0-9]+\z/';
+const SITE_DISPATCH_REQUIRES_PATTERN   = '/^[0-9]+\.[0-9]+(\.[0-9]+)?\z/';
+
+/**
+ * Builds the blob that OpenSSH signs for a file (SSHSIG format, hash sha512).
+ *
+ * @param string $message       The signed file, byte for byte.
+ * @param string $sig_namespace The SSHSIG namespace.
+ * @return string
+ */
+function site_dispatch_sshsig_blob( string $message, string $sig_namespace ): string {
+	$fields = array( $sig_namespace, '', 'sha512', hash( 'sha512', $message, true ) );
+	$blob   = 'SSHSIG';
+	foreach ( $fields as $field ) {
+		$blob .= pack( 'N', strlen( $field ) ) . $field;
+	}
+	return $blob;
+}
+
+/**
+ * Checks a raw Ed25519 signature over the manifest against a list of public keys.
+ *
+ * A malformed key list fails as a whole: the keys are build constants, a broken one is a build
+ * error and must not pass quietly.
+ *
+ * @param string       $manifest_bytes The manifest as served.
+ * @param string       $sig_raw        The raw signature, exactly 64 bytes.
+ * @param array<mixed> $pubkeys_raw    Raw public keys, 32 bytes each.
+ * @return bool
+ */
+function site_dispatch_verify_signature( string $manifest_bytes, string $sig_raw, array $pubkeys_raw ): bool {
+	if ( 64 !== strlen( $sig_raw ) || array() === $pubkeys_raw ) {
+		return false;
+	}
+	if ( ! function_exists( 'sodium_crypto_sign_verify_detached' ) ) {
+		return false;
+	}
+	$keys = array();
+	foreach ( $pubkeys_raw as $key ) {
+		if ( ! is_string( $key ) || 32 !== strlen( $key ) ) {
+			return false;
+		}
+		$keys[] = $key;
+	}
+	$blob  = site_dispatch_sshsig_blob( $manifest_bytes, SITE_DISPATCH_SIG_NAMESPACE );
+	$valid = false;
+	try {
+		foreach ( $keys as $key ) {
+			if ( sodium_crypto_sign_verify_detached( $sig_raw, $blob, $key ) ) {
+				$valid = true;
+			}
+		}
+	} catch ( \Throwable $e ) {
+		return false;
+	}
+	return $valid;
+}
+
