@@ -40,7 +40,7 @@ async function refused( answer ) {
 	assert.equal( await redeem(), 'failed' );
 	assert.equal( await state(), null, 'no connection stored' );
 	assert.equal( await transient(), false, 'the request is used up' );
-	assert.deepEqual( await site.cron(), [] );
+	assert.deepEqual( await site.reportCron(), [] );
 }
 
 test( 'enrollment stores the connection and plans the first report', async () => {

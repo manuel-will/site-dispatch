@@ -37,7 +37,7 @@ describe( 'staging site', () => {
 		` );
 		await site.fetch( admin, '/wp-admin/index.php' );
 		assert.equal( fake.requests.length, 0 );
-		assert.deepEqual( await site.cron(), [] );
+		assert.deepEqual( await site.reportCron(), [] );
 	} );
 
 	test( 'staging site cannot connect', async () => {
@@ -88,7 +88,7 @@ describe( 'site with the old report snippet', () => {
 			return true;
 		` );
 		assert.equal( fake.requests.length, 0 );
-		assert.deepEqual( await site.cron(), [] );
+		assert.deepEqual( await site.reportCron(), [] );
 	} );
 
 	test( 'site with the snippet constant shows a notice to admins', async () => {

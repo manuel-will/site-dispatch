@@ -56,6 +56,12 @@ function refused( run ) {
 	assert.ok( run.codes.includes( REFUSED ), 'refused by the plugin, codes: ' + JSON.stringify( run.codes ) );
 }
 
+// Refused by the check right after the download, not only by the second hash before unpacking.
+function refusedAtDownload( run ) {
+	refused( run );
+	assert.ok( ! run.messages.some( ( text ) => text.includes( 'Unpacking' ) ), 'the upgrader never got a package' );
+}
+
 async function stays() {
 	assert.deepEqual( await version(), { header: INSTALLED, loaded: INSTALLED, active: true } );
 }
@@ -191,7 +197,7 @@ test( 'zip replaced on the server is refused', async () => {
 	await ready();
 	release.zip = makeRelease( '0.1.1', { builtIn: [ ctx.stranger, ctx.stranger ], signer: ctx.stranger } ).zip;
 	const run = await site.php( php.upgrade );
-	refused( run );
+	refusedAtDownload( run );
 	await stays();
 } );
 
@@ -200,13 +206,13 @@ test( 'zip with one changed byte is refused', async () => {
 	const changed = Buffer.from( published.zip );
 	changed[ changed.length - 100 ] ^= 1;
 	release.zip = changed;
-	refused( await site.php( php.upgrade ) );
+	refusedAtDownload( await site.php( php.upgrade ) );
 	await stays();
 } );
 
 test( 'zip of exactly 2 mb installs, one byte more is refused', async () => {
 	await ready( releaseOfSize( 2097153 ) );
-	refused( await site.php( php.upgrade ) );
+	refusedAtDownload( await site.php( php.upgrade ) );
 	await stays();
 
 	await site.reset();
@@ -231,8 +237,7 @@ for ( const [ name, entries ] of Object.entries( hostile ) ) {
 	test( 'validly signed zip is refused before unpacking: ' + name, async () => {
 		await ready( releaseAround( '0.1.1', zipOf( entries ), keys[ 0 ] ) );
 		const run = await site.php( php.upgrade );
-		refused( run );
-		assert.ok( ! run.messages.some( ( text ) => text.includes( 'Unpacking' ) ), 'nothing was unpacked' );
+		refusedAtDownload( run );
 		await stays();
 		const stray = await site.php( `
 			return array_values( array_filter(
@@ -246,7 +251,7 @@ for ( const [ name, entries ] of Object.entries( hostile ) ) {
 
 test( 'validly signed file that is no zip is refused', async () => {
 	await ready( releaseAround( '0.1.1', Buffer.from( 'this is not a zip archive' ), keys[ 0 ] ) );
-	refused( await site.php( php.upgrade ) );
+	refusedAtDownload( await site.php( php.upgrade ) );
 	await stays();
 } );
 
@@ -261,6 +266,9 @@ for ( const mode of [ 'content', 'path' ] ) {
 		` );
 		const run = await site.php( php.upgrade );
 		refused( run );
+		// The first check passed and the upgrader went on to unpack. That also shows that the
+		// tests above can tell the two checks apart.
+		assert.ok( run.messages.some( ( text ) => text.includes( 'Unpacking' ) ), 'refused at the second check' );
 		await stays();
 	} );
 }

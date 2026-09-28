@@ -286,6 +286,17 @@ echo "\\n<<<RESULT>>>" . json_encode( array( 'result' => $site_dispatch_test_res
 			` );
 		},
 
+		// The same without the daily update check, which is planned on every site. An empty list
+		// says: nothing is planned that would send a report.
+		async reportCron() {
+			const found = await site.cron();
+			if ( Array.isArray( found ) ) {
+				return found;
+			}
+			const { site_dispatch_update_check: check, ...rest } = found;
+			return check && 0 === Object.keys( rest ).length ? [] : rest;
+		},
+
 		async stop() {
 			await cli[ Symbol.asyncDispose ]();
 			fs.rmSync( pluginDir, { recursive: true, force: true } );

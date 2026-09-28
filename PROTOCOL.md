@@ -214,7 +214,10 @@ zip                   https://github.com/<owner>/site-dispatch/releases/download
 
 GitHub answers these with redirects to its asset host. Following them is safe because nothing is
 trusted for where it came from: the manifest counts only with a valid signature, the ZIP only with
-the hash from that manifest. `latest` skips drafts and pre-releases. Manifest and signature fetched
+the hash from that manifest. The plugin follows redirects by itself, hop by hop and at most five.
+Every hop has to be an absolute `https` address on port 443 without a user part, with TLS
+verification on and with the size limit of the file that is being fetched. Anything else ends the
+fetch. `latest` skips drafts and pre-releases. Manifest and signature fetched
 across a release change do not match, which reads as an invalid signature and resolves itself at
 the next daily check.
 
@@ -263,19 +266,35 @@ fails, because the namespace is part of the signed blob.
 
 ### On the site
 
-1. Daily: fetch manifest and signature, verify. Invalid: do nothing, store nothing.
+1. Daily (cron hook `site_dispatch_update_check`, also on a site that is not connected): fetch
+   manifest and signature, verify. Invalid: do nothing, store nothing.
 2. Accept only if `slug` is its own, `version` is strictly higher than the installed one, `zip`
    matches, and the WordPress and PHP minimums are met.
 3. A version seen for the first time gets a **local** timestamp. WordPress is offered the update
-   72 hours later, or at once if "install updates immediately" is on (default off).
-4. Install, automatic or by click: verify the stored manifest again, download the ZIP from the fixed
-   address, compare SHA-512 of the local file with `hash_equals`, check for the single top level
-   folder `site-dispatch/`, hand exactly that file to the WordPress upgrader.
-5. The plugin header carries `Update URI`, so WordPress ignores wordpress.org data for this slug.
-6. A key change is a normal release with new built-in public keys, signed by a key the installed
+   72 hours later, or at once if "install updates immediately" is on (default off). A manifest with
+   other bytes for the same version counts as new and starts the 72 hours again.
+4. Recall. A waiting update is dropped when the latest release is gone (`404` on the manifest) or
+   when a validly signed manifest is not newer than the installed version or does not fit the
+   site. A transport error, any other status and an invalid signature change nothing. So deleting a
+   release cancels it on every site at its next daily check, and nobody without a signing key can
+   cancel or restart a waiting update.
+5. Install, automatic or by click: verify the stored manifest again, check the waiting period
+   again, download the ZIP from the address built from the manifest (the package address WordPress
+   hands over is ignored), check the size, compare SHA-512 of the local file with `hash_equals`,
+   check every name inside the ZIP (all under `site-dispatch/`, no `..`, no backslash, no absolute
+   path, the main file present), hand exactly that file to the WordPress upgrader. Right before
+   unpacking the file is hashed once more (`pre_unzip_file`, WordPress 6.4). After unpacking there
+   has to be exactly one folder, `site-dispatch`. A deleted release answers the ZIP request with
+   `404`, which ends the install.
+6. The plugin header carries `Update URI`. WordPress sends it to wordpress.org, which then leaves
+   the plugin out of its answer. The plugin does not rely on that: at every read of the update list
+   it removes any entry for itself that it did not make.
+7. A key change is a normal release with new built-in public keys, signed by a key the installed
    version already knows.
 
 A bad release is recalled with a higher version, or deleted within the waiting period.
+
+The plugin needs `ZipArchive` to look into the ZIP before unpacking. Without it no update installs.
 
 ## Test vectors
 

@@ -28,9 +28,9 @@ test( 'plugin activates without any output or notice', async () => {
 	assert.deepEqual( seen, { active: true, version: PLUGIN_VERSION, header: PLUGIN_VERSION } );
 } );
 
-test( 'a fresh site is not connected and has no cron event', async () => {
+test( 'a fresh site is not connected and plans no report, only the update check', async () => {
 	assert.equal( await site.php( 'return site_dispatch_get_state();' ), null );
-	assert.deepEqual( await site.cron(), [] );
+	assert.deepEqual( Object.keys( await site.cron() ), [ 'site_dispatch_update_check' ] );
 } );
 
 test( 'a request to any other host never leaves the test site', async () => {

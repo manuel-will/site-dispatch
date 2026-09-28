@@ -38,9 +38,11 @@ add_filter(
 		if ( defined( 'SITE_DISPATCH_TEST_LOOPBACK' ) && 0 === strpos( $url, home_url( '/' ) ) ) {
 			return $pre;
 		}
-		if ( 1 !== preg_match( '#^https://([a-z0-9.-]+)/(.*)\z#s', $url, $hit ) || ! isset( $ports[ $hit[1] ] ) ) {
+		// http is let through to the fakes as well, so that it is the plugin that has to refuse it.
+		if ( 1 !== preg_match( '#^(https?)://([a-z0-9.-]+)/(.*)\z#s', $url, $found ) || ! isset( $ports[ $found[2] ] ) ) {
 			return new WP_Error( 'site_dispatch_test_blocked', 'Refused by the test reroute.' );
 		}
+		$hit = array( $found[0], $found[2], $found[3] );
 		$seen = array();
 		foreach ( array( 'sslverify', 'redirection', 'timeout', 'limit_response_size', 'reject_unsafe_urls' ) as $name ) {
 			$seen[ $name ] = $args[ $name ] ?? null;
@@ -51,7 +53,8 @@ add_filter(
 		$forward                           = $args;
 		$forward['headers']                = is_array( $args['headers'] ?? null ) ? $args['headers'] : array();
 		$forward['headers']['X-Test-Args'] = wp_json_encode( $seen );
-		$forward['headers']['X-Test-Host'] = $hit[1];
+		$forward['headers']['X-Test-Host']   = $hit[1];
+		$forward['headers']['X-Test-Scheme'] = $found[1];
 		$forward['sslverify']              = false;
 		$forward['reject_unsafe_urls']     = false;
 		return wp_remote_request( 'http://127.0.0.1:' . $ports[ $hit[1] ] . '/' . $hit[2], $forward );
