@@ -25,6 +25,13 @@
 			</property>
 		</properties>
 	</rule>
+	<rule ref="WordPress.Security.ValidatedSanitizedInput">
+		<properties>
+			<property name="customSanitizingFunctions" type="array">
+				<element value="site_dispatch_valid_server_host"/>
+			</property>
+		</properties>
+	</rule>
 	<rule ref="WordPress.WP.I18n">
 		<properties>
 			<property name="text_domain" type="array">

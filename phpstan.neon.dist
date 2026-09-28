@@ -1,3 +1,5 @@
+includes:
+	- vendor/szepeviktor/phpstan-wordpress/extension.neon
 parameters:
 	level: max
 	phpVersion: 70400
