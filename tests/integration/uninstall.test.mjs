@@ -36,7 +36,11 @@ async function fill() {
 	` );
 	assert.equal( filled, true );
 	assert.equal( ( await rows() ).length, 6, 'four options, the transient and its timeout' );
-	assert.deepEqual( Object.keys( await site.cron() ).sort(), [ 'site_dispatch_daily', 'site_dispatch_retry' ] );
+	assert.deepEqual( Object.keys( await site.cron() ).sort(), [
+		'site_dispatch_daily',
+		'site_dispatch_retry',
+		'site_dispatch_update_check',
+	] );
 }
 
 const rows = () =>
@@ -83,6 +87,7 @@ test( 'activation of a connected site plans the daily report', async () => {
 	await site.php( `activate_plugin( '${ PLUGIN_FILE }' ); return true;` );
 	const cron = await site.cron();
 	assert.equal( cron.site_dispatch_daily.length, 1 );
+	assert.equal( cron.site_dispatch_update_check.length, 1 );
 	assert.equal( cron.site_dispatch_retry, undefined );
 } );
 
@@ -92,10 +97,12 @@ test( 'uninstall leaves no option, no transient and no cron event', async () => 
 	await site.php( `
 		wp_schedule_event( time() + 600, 'daily', 'site_dispatch_daily' );
 		wp_schedule_single_event( time() + 600, 'site_dispatch_retry' );
+		wp_schedule_event( time() + 600, 'daily', 'site_dispatch_update_check' );
 		set_transient( 'site_dispatch_enroll', array( 'secret' => 'x' ), 60 );
 		return true;
 	` );
 	assert.equal( ( await rows() ).length, 6 );
+	assert.equal( Object.keys( await site.cron() ).length, 3 );
 
 	await site.php( `uninstall_plugin( '${ PLUGIN_FILE }' ); return true;` );
 	assert.deepEqual( await rows(), [] );
@@ -113,5 +120,5 @@ test( 'uninstall file does nothing when called outside of an uninstall', async (
 		/PHP run gave no result/
 	);
 	assert.deepEqual( await rows(), before );
-	assert.equal( Object.keys( await site.cron() ).length, 2 );
+	assert.equal( Object.keys( await site.cron() ).length, 3 );
 } );

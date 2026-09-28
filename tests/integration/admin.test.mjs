@@ -104,14 +104,15 @@ test( 'connected site shows host, version and last report', async () => {
 	assert.ok( page.body.includes( 'Connect again' ) );
 } );
 
-test( 'waiting update shows its install date', async () => {
-	const when = await site.php( `
-		$seen = time();
-		update_option( 'site_dispatch_update', array( 'version' => '9.9.9', 'first_seen' => $seen ), false );
-		return wp_date( 'Y-m-d H:i', $seen + 72 * HOUR_IN_SECONDS );
+// The row with a verified update is tested in update-check.test.mjs, it needs a signed release.
+test( 'waiting update without manifest and signature is not shown', async () => {
+	await site.php( `
+		update_option( 'site_dispatch_update', array( 'version' => '9.9.9', 'first_seen' => time() ), false );
+		return true;
 	` );
 	const page = await site.fetch( admin, PAGE );
-	assert.ok( page.body.includes( '9.9.9, installs from ' + when ) );
+	assert.ok( ! page.body.includes( '9.9.9' ) );
+	assert.ok( page.body.includes( '<th scope="row">Waiting update</th><td>None</td>' ) );
 } );
 
 test( 'waiting update with a damaged version is not shown', async () => {
