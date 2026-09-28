@@ -10,7 +10,7 @@ import { startFake } from './fake-server.mjs';
 import { startSite, SERVER_HOST } from './harness.mjs';
 
 const fake = await startFake();
-const site = await startSite( { fake, login: true } );
+const site = await startSite( { fake, defines: { SITE_DISPATCH_TEST_AUTOLOGIN: '1' } } );
 
 console.log( '' );
 console.log( 'Admin page:  ' + site.url + '/wp-admin/tools.php?page=site-dispatch' );
@@ -32,6 +32,22 @@ input.on( 'line', async ( line ) => {
 	fake.approve();
 	console.log( 'Approved. The page collects the key at its next check.' );
 } );
+
+// Without a terminal nobody can press Enter. Then every enrollment is approved after 10 seconds.
+if ( ! process.stdin.isTTY || process.env.SITE_DISPATCH_AUTO_APPROVE ) {
+	console.log( 'No terminal input: an open enrollment is approved by itself after 10 seconds.' );
+	let seen = 0;
+	setInterval( () => {
+		const count = fake.to( '/webhook/site-dispatch-enroll-request' ).length;
+		if ( count > seen ) {
+			seen = count;
+			setTimeout( () => {
+				fake.approve();
+				console.log( 'Approved by itself.' );
+			}, 10000 );
+		}
+	}, 500 );
+}
 
 let stopping = false;
 async function stop() {
