@@ -234,7 +234,7 @@ function site_dispatch_render_page(): void {
 		printf( '<div class="notice notice-%s"><p>%s</p></div>', esc_attr( $notices[ $code ]['type'] ), esc_html( $notices[ $code ]['text'] ) );
 	}
 
-	echo '<table class="form-table" role="presentation"><tbody>';
+	echo '<table class="widefat striped" role="presentation" style="max-width:40em;margin-top:1em"><tbody>';
 	site_dispatch_row( __( 'Connected', 'site-dispatch' ), null === $state ? __( 'No, not connected', 'site-dispatch' ) : __( 'Yes', 'site-dispatch' ) );
 	site_dispatch_row( __( 'Server', 'site-dispatch' ), null === $state ? '-' : $state['server_host'] );
 	site_dispatch_row( __( 'Last report', 'site-dispatch' ), site_dispatch_last_report_text() );

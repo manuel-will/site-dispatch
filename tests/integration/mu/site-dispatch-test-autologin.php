@@ -14,6 +14,12 @@ add_action(
 		if ( ! defined( 'SITE_DISPATCH_TEST_AUTOLOGIN' ) || is_user_logged_in() || wp_doing_ajax() || wp_doing_cron() ) {
 			return;
 		}
+		// Only for a browser that opens wp-admin. PHP runs of the harness have no such address.
+		$method = isset( $_SERVER['REQUEST_METHOD'] ) ? (string) $_SERVER['REQUEST_METHOD'] : '';
+		$target = isset( $_SERVER['REQUEST_URI'] ) ? (string) $_SERVER['REQUEST_URI'] : '';
+		if ( 'GET' !== $method || false === strpos( $target, '/wp-admin/' ) ) {
+			return;
+		}
 		$admins = get_users(
 			array(
 				'role'   => 'administrator',
