@@ -71,3 +71,60 @@ function site_dispatch_verify_signature( string $manifest_bytes, string $sig_raw
 	return $valid;
 }
 
+/**
+ * Parses a manifest. Returns null on any deviation from the seven fields and their patterns.
+ *
+ * @param string $manifest_bytes The manifest as served.
+ * @return array{schema: int, slug: string, version: string, zip: string, sha512: string, requires_wp: string, requires_php: string}|null
+ */
+function site_dispatch_parse_manifest( string $manifest_bytes ): ?array {
+	$length = strlen( $manifest_bytes );
+	if ( 0 === $length || $length > SITE_DISPATCH_MANIFEST_MAX_BYTES ) {
+		return null;
+	}
+	// Depth 2 is a flat object. Any nested value fails the decode.
+	$data = json_decode( $manifest_bytes, false, 2 );
+	if ( ! $data instanceof \stdClass ) {
+		return null;
+	}
+	$fields = get_object_vars( $data );
+	$names  = array_map( 'strval', array_keys( $fields ) );
+	sort( $names, SORT_STRING );
+	if ( array( 'requires_php', 'requires_wp', 'schema', 'sha512', 'slug', 'version', 'zip' ) !== $names ) {
+		return null;
+	}
+	$version      = $fields['version'];
+	$zip          = $fields['zip'];
+	$sha512       = $fields['sha512'];
+	$requires_wp  = $fields['requires_wp'];
+	$requires_php = $fields['requires_php'];
+	if ( 1 !== $fields['schema'] || SITE_DISPATCH_SLUG !== $fields['slug'] ) {
+		return null;
+	}
+	if ( ! is_string( $version ) || ! is_string( $zip ) || ! is_string( $sha512 ) || ! is_string( $requires_wp ) || ! is_string( $requires_php ) ) {
+		return null;
+	}
+	if ( 1 !== preg_match( SITE_DISPATCH_VERSION_PATTERN, $version ) ) {
+		return null;
+	}
+	// Equality with the name built from the version covers the file name pattern: no path, no URL.
+	if ( SITE_DISPATCH_SLUG . '-' . $version . '.zip' !== $zip ) {
+		return null;
+	}
+	if ( 1 !== preg_match( '/^[0-9a-f]{128}\z/', $sha512 ) ) {
+		return null;
+	}
+	if ( 1 !== preg_match( SITE_DISPATCH_REQUIRES_PATTERN, $requires_wp ) || 1 !== preg_match( SITE_DISPATCH_REQUIRES_PATTERN, $requires_php ) ) {
+		return null;
+	}
+	return array(
+		'schema'       => 1,
+		'slug'         => SITE_DISPATCH_SLUG,
+		'version'      => $version,
+		'zip'          => $zip,
+		'sha512'       => $sha512,
+		'requires_wp'  => $requires_wp,
+		'requires_php' => $requires_php,
+	);
+}
+
