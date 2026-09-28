@@ -16,7 +16,7 @@ rule. The server never calls a site.
 - JSON is UTF-8. Hex is lower case. Timestamps are UTC in the form `2026-01-01T00:00:00Z`.
 - A UUID matches `^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`.
 - A host name matches `^(?=.{4,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$`. No scheme,
-  no path, no port, no `user@`, no IP literal.
+  no path, no port, no `user@`, no IP literal. A label starting with `xn--` is refused.
 - Every response the plugin reads is size limited and checked against a fixed pattern. Anything else
   counts as a failure. Unknown fields in a server response are dropped, unknown fields in a manifest
   reject the manifest.

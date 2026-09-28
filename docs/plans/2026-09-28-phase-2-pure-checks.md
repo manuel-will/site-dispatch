@@ -73,8 +73,8 @@ it. Recommendation: add it in Phase 6 with the other static checks.
 **Files:** create `phpunit.xml.dist`, `phpstan.neon.dist`, `phpcs.xml.dist`, `tests/unit/bootstrap.php`,
 the three files under `includes/` with header comment only. Add `composer.lock` and this plan.
 
-- [ ] **Step 1:** `git config core.hooksPath` prints `.githooks`. `composer install` is done.
-- [ ] **Step 2:** `phpunit.xml.dist`
+- [x] **Step 1:** `git config core.hooksPath` prints `.githooks`. `composer install` is done.
+- [x] **Step 2:** `phpunit.xml.dist`
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -94,7 +94,7 @@ the three files under `includes/` with header comment only. Add `composer.lock` 
 </phpunit>
 ```
 
-- [ ] **Step 3:** `phpstan.neon.dist`
+- [x] **Step 3:** `phpstan.neon.dist`
 
 ```neon
 parameters:
@@ -104,7 +104,7 @@ parameters:
 		- includes
 ```
 
-- [ ] **Step 4:** `phpcs.xml.dist`
+- [x] **Step 4:** `phpcs.xml.dist`
 
 ```xml
 <?xml version="1.0"?>
@@ -144,7 +144,7 @@ parameters:
 </ruleset>
 ```
 
-- [ ] **Step 5:** `tests/unit/bootstrap.php`
+- [x] **Step 5:** `tests/unit/bootstrap.php`
 
 ```php
 <?php
@@ -159,9 +159,9 @@ require dirname( __DIR__, 2 ) . '/includes/hosts.php';
 require dirname( __DIR__, 2 ) . '/includes/responses.php';
 ```
 
-- [ ] **Step 6:** The three files under `includes/`, each with its file comment only (text as in
+- [x] **Step 6:** The three files under `includes/`, each with its file comment only (text as in
   tasks 2, 5 and 6). `composer stan` reports no errors, `composer cs` is clean.
-- [ ] **Step 7:** Commit: `chore: phpunit, phpstan and phpcs config, plan for phase 2`.
+- [x] **Step 7:** Commit: `chore: phpunit, phpstan and phpcs config, plan for phase 2`.
 
 ### Task 2: Signed blob and signature
 
@@ -192,9 +192,9 @@ Key list is `[A, B]` unless stated.
 | `test_key_of_wrong_length_is_rejected` | Key A with 31 and with 33 bytes | false |
 | `test_a_malformed_key_next_to_a_valid_one_rejects_the_whole_list` | `[A, 'short']`, `[A, 42]` | false |
 
-- [ ] **Step 1:** Write the test file. Run `composer test`. Expected: errors, "Call to undefined
+- [x] **Step 1:** Write the test file. Run `composer test`. Expected: errors, "Call to undefined
   function site_dispatch_sshsig_blob()".
-- [ ] **Step 2:** Code:
+- [x] **Step 2:** Code:
 
 ```php
 <?php
@@ -271,8 +271,8 @@ function site_dispatch_verify_signature( string $manifest_bytes, string $sig_raw
 }
 ```
 
-- [ ] **Step 3:** `composer test` green for this class, `composer stan` without errors.
-- [ ] **Step 4:** Commit: `feat: sshsig blob and signature check`.
+- [x] **Step 3:** `composer test` green for this class, `composer stan` without errors.
+- [x] **Step 4:** Commit: `feat: sshsig blob and signature check`.
 
 ### Task 3: Manifest parser
 
@@ -308,8 +308,8 @@ fields replaced, `null` removes a field, encoded with `JSON_UNESCAPED_SLASHES`.
 | `test_schema_as_text_is_rejected` | schema `"1"` | null |
 | `test_nested_value_is_rejected` | `requires_wp` as list | null |
 
-- [ ] **Step 1:** Write the test file, run, expected: undefined function.
-- [ ] **Step 2:** Code, appended to `includes/verify.php`:
+- [x] **Step 1:** Write the test file, run, expected: undefined function.
+- [x] **Step 2:** Code, appended to `includes/verify.php`:
 
 ```php
 /**
@@ -370,8 +370,8 @@ function site_dispatch_parse_manifest( string $manifest_bytes ): ?array {
 }
 ```
 
-- [ ] **Step 3:** `composer test` and `composer stan` green.
-- [ ] **Step 4:** Commit: `feat: manifest parser`.
+- [x] **Step 3:** `composer test` and `composer stan` green.
+- [x] **Step 4:** Commit: `feat: manifest parser`.
 
 ### Task 4: Acceptance
 
@@ -398,8 +398,8 @@ manifest. Defaults for the call: installed `1.2.3`, PHP `8.2.30`, WordPress `6.8
 | `test_foreign_slug_is_rejected` | slug `akismet` | false |
 | `test_array_that_is_not_a_manifest_is_rejected` | `[]`, version as integer | false |
 
-- [ ] **Step 1:** Write the test file, run, expected: undefined function.
-- [ ] **Step 2:** Code, appended to `includes/verify.php`:
+- [x] **Step 1:** Write the test file, run, expected: undefined function.
+- [x] **Step 2:** Code, appended to `includes/verify.php`:
 
 ```php
 /**
@@ -479,8 +479,8 @@ function site_dispatch_manifest_acceptable( array $m, string $installed, string 
 }
 ```
 
-- [ ] **Step 3:** `composer test` and `composer stan` green.
-- [ ] **Step 4:** Commit: `feat: manifest acceptance with numeric version compare`.
+- [x] **Step 3:** `composer test` and `composer stan` green.
+- [x] **Step 4:** Commit: `feat: manifest acceptance with numeric version compare`.
 
 ### Task 5: Hosts
 
@@ -509,8 +509,8 @@ function site_dispatch_manifest_acceptable( array $m, string $installed, string 
 | `test_norm_host_trims_lowers_and_drops_a_leading_www` | ` WWW.Example.com `, `www.`, empty | `example.com`, empty, empty |
 | `test_norm_host_drops_only_a_leading_www` | `shop.www.example.com`, `wwwexample.com`, `www.www.example.com` | unchanged, unchanged, `www.example.com` |
 
-- [ ] **Step 1:** Write the test file, run, expected: undefined function.
-- [ ] **Step 2:** Code:
+- [x] **Step 1:** Write the test file, run, expected: undefined function.
+- [x] **Step 2:** Code:
 
 ```php
 <?php
@@ -564,8 +564,8 @@ function site_dispatch_valid_server_host( string $input ): ?string {
 }
 ```
 
-- [ ] **Step 3:** `composer test` and `composer stan` green.
-- [ ] **Step 4:** Commit: `feat: host normalisation and server host check`.
+- [x] **Step 3:** `composer test` and `composer stan` green.
+- [x] **Step 4:** Commit: `feat: host normalisation and server host check`.
 
 ### Task 6: Enrollment responses
 
@@ -599,8 +599,8 @@ changes. UUID `00000000-0000-4000-8000-000000000001`, user code `ABCDEFGH`, site
 | `test_user_code_with_a_look_alike_character_is_rejected` | codes with `I`, `O`, `0`, `1`, lower case, 7 and 9 characters | null |
 | `test_request_id_that_is_no_uuid_is_rejected` | UUID plus newline | null |
 
-- [ ] **Step 1:** Write the test file, run, expected: undefined function.
-- [ ] **Step 2:** Code:
+- [x] **Step 1:** Write the test file, run, expected: undefined function.
+- [x] **Step 2:** Code:
 
 ```php
 <?php
@@ -700,17 +700,17 @@ function site_dispatch_parse_redeem_response( string $body ): ?array {
 }
 ```
 
-- [ ] **Step 3:** `composer test` and `composer stan` green.
-- [ ] **Step 4:** Commit: `feat: parsers for the enrollment responses`.
+- [x] **Step 3:** `composer test` and `composer stan` green.
+- [x] **Step 4:** Commit: `feat: parsers for the enrollment responses`.
 
 ### Task 7: Gate
 
-- [ ] **Step 1:** `composer test` (expected: 80 tests, all green), `composer stan` (no errors),
+- [x] **Step 1:** `composer test` (expected: 80 tests, all green), `composer stan` (no errors),
   `composer cs` (clean), `composer vectors` (all vectors hold).
-- [ ] **Step 2:** `README.md`, section "Development": add `composer test`, `composer stan`,
+- [x] **Step 2:** `README.md`, section "Development": add `composer test`, `composer stan`,
   `composer cs` to the command block.
-- [ ] **Step 3:** If decision 5 is approved: add the Punycode sentence to `PROTOCOL.md`.
-- [ ] **Step 4:** Commit: `docs: development commands, phase 2 done`.
+- [x] **Step 3:** If decision 5 is approved: add the Punycode sentence to `PROTOCOL.md`.
+- [x] **Step 4:** Commit: `docs: development commands, phase 2 done`.
 - [ ] **Step 5:** In `n8n-builder`: finding of Phase 2 into `plan-plugin.md`, session prompt for
   Phase 3 next to it. Present the gate. Phase 3 does not start.
 
