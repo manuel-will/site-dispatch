@@ -711,7 +711,7 @@ function site_dispatch_parse_redeem_response( string $body ): ?array {
   `composer cs` to the command block.
 - [x] **Step 3:** If decision 5 is approved: add the Punycode sentence to `PROTOCOL.md`.
 - [x] **Step 4:** Commit: `docs: development commands, phase 2 done`.
-- [ ] **Step 5:** In `n8n-builder`: finding of Phase 2 into `plan-plugin.md`, session prompt for
+- [x] **Step 5:** In `n8n-builder`: finding of Phase 2 into `plan-plugin.md`, session prompt for
   Phase 3 next to it. Present the gate. Phase 3 does not start.
 
 ## Coverage of the master plan
