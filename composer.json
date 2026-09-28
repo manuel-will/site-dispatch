@@ -1,5 +1,5 @@
 {
-	"name": "manuelwill/site-dispatch",
+	"name": "manuel-will/site-dispatch",
 	"description": "WordPress plugin that sends a signed, read-only status report to a server you connect it to.",
 	"type": "wordpress-plugin",
 	"license": "GPL-2.0-or-later",
