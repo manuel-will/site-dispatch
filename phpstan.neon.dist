@@ -4,4 +4,6 @@ parameters:
 	level: max
 	phpVersion: 70400
 	paths:
+		- site-dispatch.php
+		- uninstall.php
 		- includes
