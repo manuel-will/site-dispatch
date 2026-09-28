@@ -9,7 +9,11 @@ import { runCLI } from '@wp-playground/cli';
 import { CANARY_SITE_KEY, CANARY_WEBSITE_ID } from './fake-server.mjs';
 
 const here = path.dirname( fileURLToPath( import.meta.url ) );
-const root = path.resolve( here, '..', '..' );
+// SITE_DISPATCH_TEST_SOURCE points the tests at another copy of the plugin, for red runs with a
+// mutated copy. Default is this repository.
+const root = process.env.SITE_DISPATCH_TEST_SOURCE
+	? path.resolve( process.env.SITE_DISPATCH_TEST_SOURCE )
+	: path.resolve( here, '..', '..' );
 
 export const SERVER_HOST = 'server.example.test';
 export const PLUGIN_FILE = 'site-dispatch/site-dispatch.php';
@@ -53,6 +57,8 @@ export async function startSite( { fake, defines = {}, login = false } = {} ) {
 	}
 	const cli = await runCLI( args );
 	const users = new Map();
+	// Playground answers the very first HTTP request with a redirect to itself. Spend it here.
+	await fetch( cli.serverUrl + '/', { redirect: 'manual' } );
 
 	const site = {
 		url: cli.serverUrl,
