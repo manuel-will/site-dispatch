@@ -128,3 +128,78 @@ function site_dispatch_parse_manifest( string $manifest_bytes ): ?array {
 	);
 }
 
+/**
+ * Splits the numeric start of a version into three parts. Missing parts count as 0.
+ *
+ * Takes what PHP and WordPress report ("8.2.30", "6.9-beta1", "7.4.33-0ubuntu1").
+ *
+ * @param string $version A version string.
+ * @return array{string, string, string}|null Null without a numeric start.
+ */
+function site_dispatch_version_parts( string $version ): ?array {
+	if ( 1 !== preg_match( '/^([0-9]+)(?:\.([0-9]+))?(?:\.([0-9]+))?/', $version, $hit ) ) {
+		return null;
+	}
+	return array( $hit[1], $hit[2] ?? '0', $hit[3] ?? '0' );
+}
+
+/**
+ * Compares two versions number by number, on the digits, so no length overflows.
+ *
+ * @param array{string, string, string} $left  Parts of the left version.
+ * @param array{string, string, string} $right Parts of the right version.
+ * @return int -1, 0 or 1.
+ */
+function site_dispatch_compare_versions( array $left, array $right ): int {
+	foreach ( array( 0, 1, 2 ) as $i ) {
+		$a = ltrim( $left[ $i ], '0' );
+		$b = ltrim( $right[ $i ], '0' );
+		$d = strlen( $a ) <=> strlen( $b );
+		if ( 0 === $d ) {
+			$d = strcmp( $a, $b ) <=> 0;
+		}
+		if ( 0 !== $d ) {
+			return $d;
+		}
+	}
+	return 0;
+}
+
+/**
+ * Decides whether a parsed manifest may be offered as an update.
+ *
+ * @param array<mixed> $m         A manifest from site_dispatch_parse_manifest().
+ * @param string       $installed The installed plugin version.
+ * @param string       $php       The running PHP version.
+ * @param string       $wp        The running WordPress version.
+ * @return bool
+ */
+function site_dispatch_manifest_acceptable( array $m, string $installed, string $php, string $wp ): bool {
+	$version      = $m['version'] ?? null;
+	$requires_wp  = $m['requires_wp'] ?? null;
+	$requires_php = $m['requires_php'] ?? null;
+	if ( SITE_DISPATCH_SLUG !== ( $m['slug'] ?? null ) ) {
+		return false;
+	}
+	if ( ! is_string( $version ) || ! is_string( $requires_wp ) || ! is_string( $requires_php ) ) {
+		return false;
+	}
+	if ( 1 !== preg_match( SITE_DISPATCH_VERSION_PATTERN, $version ) || 1 !== preg_match( SITE_DISPATCH_VERSION_PATTERN, $installed ) ) {
+		return false;
+	}
+	if ( 1 !== preg_match( SITE_DISPATCH_REQUIRES_PATTERN, $requires_wp ) || 1 !== preg_match( SITE_DISPATCH_REQUIRES_PATTERN, $requires_php ) ) {
+		return false;
+	}
+	$offered   = site_dispatch_version_parts( $version );
+	$current   = site_dispatch_version_parts( $installed );
+	$php_has   = site_dispatch_version_parts( $php );
+	$php_needs = site_dispatch_version_parts( $requires_php );
+	$wp_has    = site_dispatch_version_parts( $wp );
+	$wp_needs  = site_dispatch_version_parts( $requires_wp );
+	if ( null === $offered || null === $current || null === $php_has || null === $php_needs || null === $wp_has || null === $wp_needs ) {
+		return false;
+	}
+	return site_dispatch_compare_versions( $offered, $current ) > 0
+		&& site_dispatch_compare_versions( $php_has, $php_needs ) >= 0
+		&& site_dispatch_compare_versions( $wp_has, $wp_needs ) >= 0;
+}
