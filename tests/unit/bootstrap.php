@@ -12,3 +12,7 @@ require dirname( __DIR__, 2 ) . '/includes/verify.php';
 require dirname( __DIR__, 2 ) . '/includes/hosts.php';
 require dirname( __DIR__, 2 ) . '/includes/responses.php';
 require dirname( __DIR__, 2 ) . '/includes/report.php';
+require dirname( __DIR__, 2 ) . '/includes/keys.php';
+require dirname( __DIR__, 2 ) . '/includes/source.php';
+require dirname( __DIR__, 2 ) . '/includes/class-site-dispatch-memo.php';
+require dirname( __DIR__, 2 ) . '/includes/updater.php';

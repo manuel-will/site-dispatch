@@ -13,7 +13,7 @@
 	<arg name="extensions" value="php"/>
 	<arg value="sp"/>
 
-	<config name="minimum_wp_version" value="6.0"/>
+	<config name="minimum_wp_version" value="6.4"/>
 
 	<rule ref="WordPress-Extra"/>
 	<rule ref="WordPress-Docs"/>

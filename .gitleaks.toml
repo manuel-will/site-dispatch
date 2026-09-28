@@ -12,3 +12,10 @@ regexes = [
 	'''^caaaaa00caaaaa00caaaaa00caaaaa00caaaaa00caaaaa00caaaaa00caaaaa00$''',
 	'''^canary-master-key-do-not-use-0123456789abcdef0123456789abcdef$''',
 ]
+
+[[allowlists]]
+description = "SHA-256 of the public file includes/keys.php in tools/production-pins.json (a hash of public keys, not a secret). Changes with every key change."
+regexTarget = "secret"
+regexes = [
+	'''^1d14a1a10cdbc563e7863e6271c96146af83ee02034d732fe31b0fb29b7a0b04$''',
+]

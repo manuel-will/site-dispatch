@@ -13,7 +13,6 @@
 const SITE_DISPATCH_PAGE          = 'site-dispatch';
 const SITE_DISPATCH_POLL_INTERVAL = 3000;
 const SITE_DISPATCH_POLL_MAX      = 120000;
-const SITE_DISPATCH_UPDATE_DELAY  = 259200;
 
 /**
  * Adds the page to the "Tools" menu.
@@ -201,12 +200,12 @@ function site_dispatch_last_report_text(): string {
  * @return string
  */
 function site_dispatch_waiting_update_text( bool $early ): string {
-	$update     = get_option( 'site_dispatch_update', null );
-	$version    = is_array( $update ) ? ( $update['version'] ?? null ) : null;
-	$first_seen = is_array( $update ) ? ( $update['first_seen'] ?? null ) : null;
-	if ( ! is_string( $version ) || 1 !== preg_match( SITE_DISPATCH_VERSION_PATTERN, $version ) || ! is_int( $first_seen ) ) {
+	$update = site_dispatch_get_update();
+	if ( null === $update ) {
 		return __( 'None', 'site-dispatch' );
 	}
+	$version    = $update['version'];
+	$first_seen = $update['first_seen'];
 	if ( $early ) {
 		/* translators: %s: version number */
 		return sprintf( __( '%s, installs at the next check', 'site-dispatch' ), $version );
