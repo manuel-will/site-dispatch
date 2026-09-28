@@ -4,6 +4,7 @@
 	"type": "module",
 	"scripts": {
 		"test": "node --test --test-concurrency=1 \"tests/integration/*.test.mjs\"",
+		"test:tools": "node --test \"tests/tools/*.test.mjs\"",
 		"playground": "node tests/integration/serve.mjs"
 	},
 	"devDependencies": {
