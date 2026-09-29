@@ -174,16 +174,16 @@ Rules of `site_dispatch_next_update()`:
 
 ### Task 1: Plan, keys, source, header
 
-- [ ] **Step 1:** Commit this plan: `docs: plan for phase 4`.
-- [ ] **Step 2:** `tests/unit/KeysTest.php`: the key file declares exactly two entries, each decodes
+- [x] **Step 1:** Commit this plan: `docs: plan for phase 4`.
+- [x] **Step 2:** `tests/unit/KeysTest.php`: the key file declares exactly two entries, each decodes
   to 32 bytes, they differ, the file declares nothing else (one `const`, no function). Same for
   `source.php`: one `const`, value starts with `https://github.com/`. Run, expected: red.
-- [ ] **Step 3:** `includes/keys.php` with the two keys from the `.pub` files (raw 32 bytes,
+- [x] **Step 3:** `includes/keys.php` with the two keys from the `.pub` files (raw 32 bytes,
   base64), `includes/source.php`. `tools/production-pins.json` with their SHA-256.
-- [ ] **Step 4:** `site-dispatch.php`: header `Update URI`, `Requires at least: 6.4`, `require` of
+- [x] **Step 4:** `site-dispatch.php`: header `Update URI`, `Requires at least: 6.4`, `require` of
   `keys.php`, `source.php`, `updater.php` (stub with file comment). `phpcs.xml.dist`:
   `minimum_wp_version` 6.4.
-- [ ] **Step 5:** Four commands green. If gitleaks reports a public key: allowlist by exact value.
+- [x] **Step 5:** Four commands green. If gitleaks reports a public key: allowlist by exact value.
   Commit: `feat: public keys, release address, update uri`.
 
 ### Task 2: Pure decisions
@@ -198,9 +198,9 @@ Rules of `site_dispatch_next_update()`:
 | due: before 72 hours, at 72 hours, one second before, switch on, `first_seen` in the future | bool |
 | zip names: good list, second top folder, file on top level, `../`, `..` in the middle, backslash, absolute path, drive letter, empty list, empty name | bool |
 
-- [ ] **Step 1:** Write the tests, keys created with `sodium_crypto_sign_keypair()`. Run: red.
-- [ ] **Step 2:** Write the pure functions. Run: green. `composer stan`, `composer cs`.
-- [ ] **Step 3:** Commit: `feat: pure decisions of the updater`.
+- [x] **Step 1:** Write the tests, keys created with `sodium_crypto_sign_keypair()`. Run: red.
+- [x] **Step 2:** Write the pure functions. Run: green. `composer stan`, `composer cs`.
+- [x] **Step 3:** Commit: `feat: pure decisions of the updater`.
 
 ### Task 3: Tools
 
@@ -216,10 +216,10 @@ Rules of `site_dispatch_next_update()`:
 | build-test-zip: two builds with the same keys give the same ZIP, version in header and constant changed, `keys.php` and `source.php` replaced, nothing else differs from the source | equal |
 | finish-release refuses: signature of an unknown key, ZIP changed after the build, signature over another manifest | exit code not 0 |
 
-- [ ] **Step 1:** `package.json`: script `test:tools`. Write the tests. Run: red.
-- [ ] **Step 2:** `tools/lib/zip.mjs`, `sshsig.mjs`, `release.mjs`, then the three tools. The
+- [x] **Step 1:** `package.json`: script `test:tools`. Write the tests. Run: red.
+- [x] **Step 2:** `tools/lib/zip.mjs`, `sshsig.mjs`, `release.mjs`, then the three tools. The
   refusal tests run `build-release.mjs` against a throwaway git repository in a temp folder.
-- [ ] **Step 3:** Run: green. One dry run of `build-release.mjs` on this repository, twice, same
+- [x] **Step 3:** Run: green. One dry run of `build-release.mjs` on this repository, twice, same
   SHA-512 both times. `dist/` is ignored by git. Commit: `feat: release tools and test build`.
 
 ### Task 4: Fetch, daily check, stored update
@@ -249,11 +249,11 @@ existing tests stay green (`uninstall.test.mjs` learns the third cron hook).
 | fake does not answer | waiting update unchanged |
 | admin page shows the waiting update and the date | text on the page |
 
-- [ ] **Step 1:** Harness, fake, reroute. `npm test`: the 83 stay green.
-- [ ] **Step 2:** Test file. Run: red.
-- [ ] **Step 3:** `updater.php`: fetch, check, reader. `site-dispatch.php`: cron. `uninstall.php`.
+- [x] **Step 1:** Harness, fake, reroute. `npm test`: the 83 stay green.
+- [x] **Step 2:** Test file. Run: red.
+- [x] **Step 3:** `updater.php`: fetch, check, reader. `site-dispatch.php`: cron. `uninstall.php`.
   `admin.php`: reader. Run: green. Four commands green.
-- [ ] **Step 4:** Commit: `feat: daily update check with local waiting period`.
+- [x] **Step 4:** Commit: `feat: daily update check with local waiting period`.
 
 ### Task 5: Offer and install
 
@@ -289,20 +289,104 @@ existing tests stay green (`uninstall.test.mjs` learns the third cron hook).
 | release with new built-in keys C and D, signed by A: installs, the next release signed by C installs | chain holds |
 | release signed by C while the installed version knows A and B | ignored |
 
-- [ ] **Step 1:** Test files. Run: red.
-- [ ] **Step 2:** The five filters in `updater.php`, registered in `site-dispatch.php`. Run: green.
-- [ ] **Step 3:** Four commands green. Commit: `feat: signed self update`.
+- [x] **Step 1:** Test files. Run: red.
+- [x] **Step 2:** The five filters in `updater.php`, registered in `site-dispatch.php`. Run: green.
+- [x] **Step 3:** Four commands green. Commit: `feat: signed self update`.
 
 ### Task 6: Gate
 
-- [ ] **Step 1:** `composer test`, `composer stan`, `composer cs`, `composer vectors`,
+- [x] **Step 1:** `composer test`, `composer stan`, `composer cs`, `composer vectors`,
   `npm run test:tools`, `npm test`. `npm test` once more with `SITE_DISPATCH_TEST_PHP=7.4`.
-- [ ] **Step 2:** Counter check in the scratchpad: a copy of the plugin with deliberate faults
+- [x] **Step 2:** Counter check in the scratchpad: a copy of the plugin with deliberate faults
   (signature check removed, waiting period removed, hash compare removed, name check removed,
   second hash removed, `https` rule removed, recall rule removed). The tests have to find each.
-- [ ] **Step 3:** Coverage table: every line of the "Update" block of the attack catalogue with its
+- [x] **Step 3:** Coverage table: every line of the "Update" block of the attack catalogue with its
   tests. `PROTOCOL.md` (decision 15), `README.md` (release steps, `npm run test:tools`).
-- [ ] **Step 4:** Commit: `docs: update contract and release steps, phase 4 done`.
-- [ ] **Step 5:** In `n8n-builder`: finding of Phase 4 into `plan-plugin.md`, `signing-keys.md`
+- [x] **Step 4:** Commit: `docs: update contract and release steps, phase 4 done`.
+- [x] **Step 5:** In `n8n-builder`: finding of Phase 4 into `plan-plugin.md`, `signing-keys.md`
   brought up to date, session prompt for Phase 5, start offered as a chip. Present the gate.
   Phase 5 does not start.
+
+## Result (2026-09-29)
+
+Built. Manuel approved the plan on 2026-09-28 with decisions 3, 8 and 11 named to him in plain
+words. 199 PHPUnit tests, 33 tool tests, 163 integration tests (83 from before, 80 new: 32 check,
+14 offer, 31 install, 3 key change), green on PHP 8.3 and on PHP 7.4 (WordPress 7.1.2, about 25
+minutes per run). PHPStan level max without errors, PHPCS clean, vectors hold.
+`build-release.mjs` ran twice on this repository and gave the same SHA-512 both times
+(98 805 bytes). Nothing was signed, pushed or published.
+
+Deviations from the plan above:
+
+- **Order.** Plugin code and tools were written before most of their tests, so only the two unit
+  test files ran red against missing code. Instead a copy of the plugin got twelve deliberate
+  faults, one at a time: signature check, waiting period, hash compare, size check, name check,
+  second hash, `https` rule, recall rule, waiting period at install, removal of a foreign entry,
+  package address of WordPress used, automatic redirects on. The tests found all twelve. The first
+  round missed one: with the hash compare removed the second hash before unpacking still refused
+  the package, so the tests passed. They now tell a refusal right after the download from one
+  right before unpacking. This does not replace the red runs of Phase 6.
+- **`Update URI` does not protect by itself.** Measured: WordPress sends the header to
+  wordpress.org and relies on wordpress.org to leave the plugin out. An entry that comes back
+  anyway is stored by WordPress. The planned test "WordPress does not store it" was wrong and now
+  says what holds: the plugin removes such an entry at every read and never uses its package
+  address. `PROTOCOL.md` says the same.
+- **Three ways to install, not two.** The automatic updater (cron), the link "update now" in the
+  plugin list (Ajax, `bulk_upgrade`) and the page `update.php` (`upgrade`, which switches the
+  plugin off and on again through a frame). All three are tested.
+- **New file `includes/class-site-dispatch-memo.php`.** Two static values for one request: the
+  verdicts on stored updates and the package handed to the upgrader. PHPStan cannot type a
+  `static` variable inside a function, WPCS wants a class in its own file.
+- **The package handed over is remembered with the hash from the manifest**, not with the hash
+  computed at the check. The second hash compares against what was signed.
+- **`SITE_DISPATCH_UPDATE_DELAY` moved** from `admin.php` to `updater.php`.
+- **Without `ZipArchive` no update installs.** The names inside the ZIP are read with it before
+  anything is unpacked. The plan did not say what happens without it.
+- **gitleaks** reported the SHA-256 of `includes/keys.php` in `tools/production-pins.json`
+  (`generic-api-key`). It is allowlisted by its exact value. A key change has to change it there
+  as well.
+- **Harness.** Several workers and an upgrade leave a worker that still sees the deleted file
+  `.maintenance`. WordPress then stops in `wp-load.php` before any code of a test or of the plugin
+  ran. The harness tries again in exactly that case, for PHP runs and for page requests. Updater
+  sites run with `DISABLE_WP_CRON`, so no background cron installs anything behind a test.
+- **The reroute lets `http` through to the fakes**, so it is the plugin that refuses it. Before
+  that change the test for the `https` rule passed with the rule removed.
+- **Nine older tests** expected "no cron event at all". They now expect "no cron event that sends
+  a report" (`site.reportCron()`), and `admin.test.mjs` shows that a hand-written update option
+  without manifest and signature is not displayed.
+- **Against the rule** two patterns in `tests/unit/KeysTest.php` were changed with a Python script
+  from the shell instead of the editor tools. The result was checked. Everything after that went
+  through the editor tools.
+
+Not done, on purpose: `finish-release.mjs --publish` never ran. `SECURITY.md` and
+`tests/static/forbidden.test.mjs` belong to Phase 6. For Phase 6: `forbidden.test.mjs` has to let
+`require_once ABSPATH . 'wp-admin/includes/file.php'` in `updater.php` pass, and the test mu-plugin
+`site-dispatch-test-swap.php` uses `file_put_contents` (tests only).
+
+## Coverage of the attack catalogue, block "Update"
+
+| Line of the catalogue | Tests |
+|---|---|
+| Manifest without signature | `check`: manifest without a signature file |
+| Signed with a foreign key | `check`: signature of an unknown key. `keys`: signed by C while A and B are known. Unit: judge unknown key |
+| One flipped bit | `check`: flipped bit in the manifest, in the signature. Unit: same |
+| Valid manifest, replaced ZIP | `install`: zip replaced on the server, zip with one changed byte |
+| Same and lower version | `check`: same and lower version, replaced by an older one. `offer`: stored update for the installed version |
+| Foreign slug | `check`: foreign slug |
+| File name with `../`, with URL, without version | `check`: path, address or no version as file name. Unit: zip url |
+| Oversized manifest and ZIP | `check`: 8192 bytes taken, one byte more not. `install`: exactly 2 MB installs, one byte more refused |
+| ZIP with wrong folder or paths to the outside | `install`: eight hostile archives, refused before unpacking. Unit: zip names |
+| Signature of wrong length | `check`: 63 and 65 bytes, armored file |
+| Signature from another namespace | `check`: namespace `git`. Tools: what OpenSSH writes for `git` does not verify |
+| Manifest fields against the waiting period | `check`: extra field. `offer`: local time in the future |
+| "Update now" past the checks | `install`: update now on the page and through Ajax, forged update list, install without stored update |
+| File swap between hash check and install | `install`: package swapped (content, path), plus the control that the swap installs without the second hash |
+| Key change with an unknown key | `keys`: key change chain, old keys stop counting |
+| `http` | `check`: redirect to http, relative, other port, user. `install`: redirect of the zip to http. `keys`: build with an http address. Unit: redirect targets, bases |
+| Update data of other plugins untouched | `offer`: byte for byte the same, offer open and closed. `install`: update of another plugin passes all filters |
+| Same slug on wordpress.org never overrides | `offer`: entry from wordpress.org never offered, replaced by the own offer, answer of wordpress.org. `install`: foreign package address ignored |
+
+Beyond the list: recall (deleted release, at check and at install), server down or in error keeps
+the waiting update, five redirects followed and the sixth not, keys and address cannot be changed
+at run time (constant, filter, option), no temp file left after a refusal, cron and options
+survive the update and the daily report goes on.
