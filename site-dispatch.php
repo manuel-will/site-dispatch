@@ -37,9 +37,14 @@ require __DIR__ . '/includes/updater.php';
 require __DIR__ . '/includes/admin.php';
 
 /**
- * Plans the daily update check, and the daily report if the site is connected.
+ * Plans the daily update check, and the daily report if the site is connected. Refuses to
+ * activate on a multisite network: the plugin reports and updates one site, nothing else.
  */
 function site_dispatch_activate(): void {
+	if ( is_multisite() ) {
+		deactivate_plugins( plugin_basename( __FILE__ ) );
+		wp_die( esc_html__( 'Site Dispatch does not run on a multisite network.', 'site-dispatch' ), '', array( 'back_link' => true ) );
+	}
 	site_dispatch_schedule();
 	site_dispatch_schedule_update_check();
 }
@@ -67,11 +72,13 @@ add_filter( 'upgrader_pre_download', 'site_dispatch_pre_download', PHP_INT_MAX, 
 add_filter( 'pre_unzip_file', 'site_dispatch_pre_unzip', PHP_INT_MAX, 2 );
 add_filter( 'upgrader_source_selection', 'site_dispatch_source_selection', PHP_INT_MAX, 4 );
 add_filter( 'auto_update_plugin', 'site_dispatch_auto_update', PHP_INT_MAX, 2 );
+add_action( 'upgrader_process_complete', 'site_dispatch_forget_package' );
 
 add_action( 'admin_init', 'site_dispatch_schedule' );
 add_action( 'admin_init', 'site_dispatch_schedule_update_check' );
 add_action( 'admin_menu', 'site_dispatch_admin_menu' );
 add_action( 'admin_notices', 'site_dispatch_legacy_notice' );
+add_action( 'admin_notices', 'site_dispatch_capability_notice' );
 add_action( 'admin_enqueue_scripts', 'site_dispatch_admin_assets' );
 add_action( 'admin_post_site_dispatch_connect', 'site_dispatch_handle_connect' );
 add_action( 'admin_post_site_dispatch_settings', 'site_dispatch_handle_settings' );

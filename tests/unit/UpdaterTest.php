@@ -141,6 +141,10 @@ final class UpdaterTest extends TestCase {
 			'port 8443'            => array( 'https://example.com:8443/a' ),
 			'upper case host'      => array( 'https://Example.com/a' ),
 			'ip literal v6'        => array( 'https://[::1]/a' ),
+			'ip literal v4'        => array( 'https://1.2.3.4/a' ),
+			'host without a dot'   => array( 'https://localhost/a' ),
+			'numeric top level'    => array( 'https://example.123/a' ),
+			'punycode label'       => array( 'https://xn--bcher-kva.example/a' ),
 			'no path'              => array( 'https://example.com' ),
 			'space'                => array( 'https://example.com/a b' ),
 			'line break at end'    => array( "https://example.com/a\n" ),
@@ -409,9 +413,75 @@ final class UpdaterTest extends TestCase {
 					'version'    => '1.2.3',
 					'first_seen' => self::NOW,
 				),
+				'high_water' => '1.2.3',
 			),
 			site_dispatch_next_update( null, 'ok', 'ok', $manifest, $sig, self::NOW )
 		);
+	}
+
+	// The high-water mark: a signed manifest below the highest version ever seen changes nothing.
+
+	public function test_next_replayed_older_release_cannot_drop_the_waiting_update(): void {
+		$waiting = self::manifest(
+			array(
+				'version' => '1.2.4',
+				'zip'     => 'site-dispatch-1.2.4.zip',
+			)
+		);
+		$stored  = array_merge( self::stored( $waiting, self::NOW - 100 ), array( 'version' => '1.2.4' ) );
+		// The attacker serves the original manifest of 1.2.3 again, validly signed, installed is 1.2.3.
+		$this->assertSame( array( 'action' => 'keep' ), site_dispatch_next_update( $stored, 'ok', 'not_newer', self::manifest(), 'y', self::NOW, '1.2.3' ) );
+		$this->assertSame( array( 'action' => 'keep' ), site_dispatch_next_update( $stored, 'ok', 'unfit', self::manifest(), 'y', self::NOW, '1.2.3' ) );
+	}
+
+	public function test_next_replayed_older_release_is_not_stored_below_the_mark(): void {
+		// Installed 1.2.2, the site has seen 1.2.4 before (and installed or lost it): 1.2.3 is a replay.
+		$manifest = self::manifest();
+		$this->assertSame( array( 'action' => 'keep' ), site_dispatch_next_update( null, 'ok', 'ok', $manifest, self::sign( $manifest, self::$secret_a ), self::NOW, '1.2.4' ) );
+	}
+
+	public function test_next_mark_from_the_option_counts_without_a_waiting_update(): void {
+		$this->assertSame( array( 'action' => 'keep' ), site_dispatch_next_update( null, 'ok', 'not_newer', self::manifest(), 'y', self::NOW, '1.2.4' ) );
+	}
+
+	public function test_next_release_at_the_mark_is_handled_as_before(): void {
+		$stored = self::stored( self::manifest(), self::NOW - 100 );
+		$this->assertSame( array( 'action' => 'delete' ), site_dispatch_next_update( $stored, 'ok', 'not_newer', self::manifest(), 'y', self::NOW, '1.2.3' ) );
+		$this->assertSame( array( 'action' => 'keep' ), site_dispatch_next_update( $stored, 'ok', 'ok', self::manifest(), $stored['sig'], self::NOW, '1.2.3' ) );
+	}
+
+	public function test_next_higher_release_raises_the_mark(): void {
+		$stored   = self::stored( self::manifest(), self::NOW - 100 );
+		$manifest = self::manifest(
+			array(
+				'version' => '1.2.4',
+				'zip'     => 'site-dispatch-1.2.4.zip',
+			)
+		);
+		$next     = site_dispatch_next_update( $stored, 'ok', 'ok', $manifest, self::sign( $manifest, self::$secret_a ), self::NOW, '1.2.3' );
+		$this->assertSame( 'store', $next['action'] );
+		$this->assertSame( '1.2.4', $next['high_water'] ?? null );
+		$unfit = site_dispatch_next_update( $stored, 'ok', 'unfit', $manifest, 'y', self::NOW, '1.2.3' );
+		$this->assertSame( array( 'action' => 'delete', 'high_water' => '1.2.4' ), $unfit );
+	}
+
+	public function test_next_malformed_mark_counts_as_none(): void {
+		$manifest = self::manifest();
+		$next     = site_dispatch_next_update( null, 'ok', 'ok', $manifest, self::sign( $manifest, self::$secret_a ), self::NOW, 'latest' );
+		$this->assertSame( 'store', $next['action'] );
+		$this->assertSame( '1.2.3', $next['high_water'] ?? null );
+	}
+
+	public function test_highest_version_skips_malformed_entries(): void {
+		$this->assertSame( '1.10.0', site_dispatch_highest_version( array( '1.9.9', 'x', '', '1.10.0', '1.2' ) ) );
+		$this->assertSame( '', site_dispatch_highest_version( array( '', 'nope' ) ) );
+	}
+
+	public function test_missing_extensions_are_named(): void {
+		$this->assertSame( array(), site_dispatch_missing_extensions( true, true ) );
+		$this->assertSame( array( 'sodium' ), site_dispatch_missing_extensions( false, true ) );
+		$this->assertSame( array( 'zip' ), site_dispatch_missing_extensions( true, false ) );
+		$this->assertSame( array( 'sodium', 'zip' ), site_dispatch_missing_extensions( false, false ) );
 	}
 
 	public function test_next_new_version_starts_the_clock_again(): void {

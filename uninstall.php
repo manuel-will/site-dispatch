@@ -9,6 +9,7 @@ defined( 'WP_UNINSTALL_PLUGIN' ) || exit;
 
 delete_option( 'site_dispatch_state' );
 delete_option( 'site_dispatch_update' );
+delete_option( 'site_dispatch_high_water' );
 delete_option( 'site_dispatch_early_updates' );
 delete_option( 'site_dispatch_last_report' );
 delete_transient( 'site_dispatch_enroll' );

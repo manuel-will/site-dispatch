@@ -275,13 +275,17 @@ for ( const mode of [ 'content', 'path' ] ) {
 
 test( 'the swap of the test really installs when the second hash is not there to stop it', async () => {
 	// Proves that the two tests above test something: with the filter of the plugin taken away
-	// the swapped package goes through.
+	// (and the handed package forgotten, as that filter would do) the swapped package goes through.
 	await ready();
 	const evil = zipOf( [ [ 'site-dispatch/site-dispatch.php', main.replace( '0.1.1', '6.6.6' ) ] ] );
 	const run = await site.php( `
 		update_option( 'sd_test_swap', 'content' );
 		update_option( 'sd_test_swap_zip', '${ evil.toString( 'base64' ) }' );
 		remove_filter( 'pre_unzip_file', 'site_dispatch_pre_unzip', PHP_INT_MAX );
+		add_filter( 'pre_unzip_file', static function ( $result ) {
+			Site_Dispatch_Memo::$package = null;
+			return $result;
+		}, PHP_INT_MAX );
 		${ php.upgrade }
 	` );
 	assert.equal( run.installed, true );
@@ -289,6 +293,52 @@ test( 'the swap of the test really installs when the second hash is not there to
 		clearstatcache();
 		return get_file_data( WP_PLUGIN_DIR . '/${ FILE }', array( 'version' => 'Version' ) )['version'];
 	` ) ), '6.6.6' );
+} );
+
+test( 'an install on which the second hash never ran is refused at the folder check', async () => {
+	// If WordPress ever unpacks without pre_unzip_file, the package handed over in pre_download is
+	// still remembered when the folder is checked, and that alone refuses the install.
+	await ready();
+	const run = await site.php( `
+		remove_filter( 'pre_unzip_file', 'site_dispatch_pre_unzip', PHP_INT_MAX );
+		${ php.upgrade }
+	` );
+	refused( run );
+	assert.ok( run.messages.some( ( text ) => text.includes( 'Unpacking' ) ), 'refused after unpacking, at the folder check' );
+	await stays();
+} );
+
+test( 'the folder check lists the unpacked package through WP_Filesystem, not through PHP', async () => {
+	// On FTP or SSH hosts the unpacked folder is a remote path that PHP cannot see. The check has to
+	// trust the listing of WP_Filesystem: a folder PHP does not have passes when WP_Filesystem lists
+	// exactly the plugin folder, and is refused when WP_Filesystem lists anything else.
+	const result = await site.php( `
+		require_once ABSPATH . 'wp-admin/includes/file.php';
+		WP_Filesystem();
+		global $wp_filesystem;
+		$real = $wp_filesystem;
+		$fake = new class() extends WP_Filesystem_Base {
+			public $entries = array();
+			public function dirlist( $path, $include_hidden = true, $recursive = false ) {
+				return '/remote/unpacked' === $path ? $this->entries : false;
+			}
+		};
+		$extra = array( 'plugin' => 'site-dispatch/site-dispatch.php' );
+		$wp_filesystem = $fake;
+		$fake->entries = array( 'site-dispatch' => array( 'name' => 'site-dispatch', 'type' => 'd' ) );
+		$one = site_dispatch_source_selection( '/remote/unpacked/site-dispatch/', '/remote/unpacked', null, $extra );
+		$fake->entries = array( 'site-dispatch' => array( 'name' => 'site-dispatch', 'type' => 'd' ), 'extra.php' => array( 'name' => 'extra.php', 'type' => 'f' ) );
+		$two = site_dispatch_source_selection( '/remote/unpacked/site-dispatch/', '/remote/unpacked', null, $extra );
+		$fake->entries = false;
+		$none = site_dispatch_source_selection( '/remote/unpacked/site-dispatch/', '/remote/unpacked', null, $extra );
+		$wp_filesystem = $real;
+		return array(
+			'one'  => $one,
+			'two'  => is_wp_error( $two ) ? $two->get_error_code() : $two,
+			'none' => is_wp_error( $none ) ? $none->get_error_code() : $none,
+		);
+	` );
+	assert.deepEqual( result, { one: '/remote/unpacked/site-dispatch/', two: REFUSED, none: REFUSED } );
 } );
 
 test( 'release deleted between offer and install is refused', async () => {

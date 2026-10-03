@@ -11,15 +11,18 @@
 /**
  * Fixed values of this file. None of them can be changed at run time.
  */
-const SITE_DISPATCH_SIG_BYTES      = 64;
-const SITE_DISPATCH_ZIP_MAX_BYTES  = 2097152;
-const SITE_DISPATCH_REDIRECT_MAX   = 5;
-const SITE_DISPATCH_URL_MAX_LENGTH = 4096;
-const SITE_DISPATCH_UPDATE_DELAY   = 259200;
-const SITE_DISPATCH_UPDATE_HOOK    = 'site_dispatch_update_check';
-const SITE_DISPATCH_UPDATE_OPTION  = 'site_dispatch_update';
-const SITE_DISPATCH_URL_PATTERN    = '/^https:\/\/[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?(?::443)?\/[\x21-\x5b\x5d-\x7e]*\z/';
-const SITE_DISPATCH_BASE_PATTERN   = '/^https:\/\/[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?(?:\/[A-Za-z0-9._-]+)+\z/';
+const SITE_DISPATCH_SIG_BYTES         = 64;
+const SITE_DISPATCH_ZIP_MAX_BYTES     = 2097152;
+const SITE_DISPATCH_REDIRECT_MAX      = 5;
+const SITE_DISPATCH_URL_MAX_LENGTH    = 4096;
+const SITE_DISPATCH_UPDATE_DELAY      = 259200;
+const SITE_DISPATCH_UPDATE_HOOK       = 'site_dispatch_update_check';
+const SITE_DISPATCH_UPDATE_OPTION     = 'site_dispatch_update';
+const SITE_DISPATCH_HIGH_WATER_OPTION = 'site_dispatch_high_water';
+// Hosts in release addresses are plain names with a letters-only top level label and no punycode,
+// like the server host: no IP literal, no port but 443, no user, nothing that is not a name.
+const SITE_DISPATCH_URL_PATTERN  = '/^https:\/\/(?:(?!xn--)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}(?::443)?\/[\x21-\x5b\x5d-\x7e]*\z/';
+const SITE_DISPATCH_BASE_PATTERN = '/^https:\/\/(?:(?!xn--)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}(?:\/[A-Za-z0-9._-]+)+\z/';
 
 /**
  * Decodes the built-in public keys. One faulty entry empties the list, so nothing verifies.
@@ -170,33 +173,47 @@ function site_dispatch_read_stored( $raw ): ?array {
  * transport error or an invalid signature keeps what is stored, so nobody without a key can cancel
  * or restart a waiting update.
  *
+ * The high-water mark is the highest version this site has ever seen validly signed (the stored
+ * option, never below the installed version), raised here by a waiting update. A signed manifest
+ * below the mark is a replay of an old release: every manifest and signature ever published stays
+ * valid forever, and whoever controls the release page could serve one again to hold sites on an
+ * old version or to drop a waiting update. Such a manifest changes nothing.
+ *
  * @param array<mixed>|null $stored         The stored update from site_dispatch_read_stored().
  * @param string            $fetch          'ok', 'gone' or 'failed'.
  * @param string            $verdict        Verdict of site_dispatch_judge_release().
  * @param string            $manifest_bytes The manifest as served.
  * @param string            $sig_raw        The raw signature.
  * @param int               $now            Local time.
- * @return array{action: string, update?: array{manifest: string, sig: string, version: string, first_seen: int}} Action 'keep', 'delete' or 'store'.
+ * @param string            $high_water     Highest version seen so far, '' if none.
+ * @return array{action: string, update?: array{manifest: string, sig: string, version: string, first_seen: int}, high_water?: string} Action 'keep', 'delete' or 'store'; 'high_water' when the mark rises.
  */
-function site_dispatch_next_update( ?array $stored, string $fetch, string $verdict, string $manifest_bytes, string $sig_raw, int $now ): array {
+function site_dispatch_next_update( ?array $stored, string $fetch, string $verdict, string $manifest_bytes, string $sig_raw, int $now, string $high_water = '' ): array {
 	if ( 'gone' === $fetch ) {
 		return array( 'action' => 'delete' );
 	}
 	if ( 'ok' !== $fetch ) {
 		return array( 'action' => 'keep' );
 	}
-	if ( 'not_newer' === $verdict || 'unfit' === $verdict ) {
-		return array( 'action' => 'delete' );
-	}
-	if ( 'ok' !== $verdict ) {
+	if ( 'not_newer' !== $verdict && 'unfit' !== $verdict && 'ok' !== $verdict ) {
 		return array( 'action' => 'keep' );
 	}
 	$manifest = site_dispatch_parse_manifest( $manifest_bytes );
 	if ( null === $manifest ) {
 		return array( 'action' => 'keep' );
 	}
-	if ( null !== $stored && ( $stored['manifest'] ?? null ) === $manifest_bytes && ( $stored['version'] ?? null ) === $manifest['version'] ) {
+	$waiting = null !== $stored && is_string( $stored['version'] ?? null ) ? $stored['version'] : '';
+	$mark    = site_dispatch_highest_version( array( $high_water, $waiting ) );
+	$order   = site_dispatch_version_order( $manifest['version'], $mark );
+	if ( $order < 0 ) {
 		return array( 'action' => 'keep' );
+	}
+	$raised = $order > 0 ? array( 'high_water' => $manifest['version'] ) : array();
+	if ( 'not_newer' === $verdict || 'unfit' === $verdict ) {
+		return array( 'action' => 'delete' ) + $raised;
+	}
+	if ( null !== $stored && ( $stored['manifest'] ?? null ) === $manifest_bytes && ( $stored['version'] ?? null ) === $manifest['version'] ) {
+		return array( 'action' => 'keep' ) + $raised;
 	}
 	// phpcs:disable WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Manifest and signature are bytes, the option holds text.
 	return array(
@@ -207,8 +224,46 @@ function site_dispatch_next_update( ?array $stored, string $fetch, string $verdi
 			'version'    => $manifest['version'],
 			'first_seen' => $now,
 		),
-	);
+	) + $raised;
 	// phpcs:enable WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
+}
+
+/**
+ * The highest well formed version in a list, '' if there is none.
+ *
+ * @param array<int, string> $versions Candidates, malformed ones are skipped.
+ * @return string
+ */
+function site_dispatch_highest_version( array $versions ): string {
+	$best = '';
+	foreach ( $versions as $version ) {
+		if ( 1 !== preg_match( SITE_DISPATCH_VERSION_PATTERN, $version ) ) {
+			continue;
+		}
+		if ( '' === $best || site_dispatch_version_order( $version, $best ) > 0 ) {
+			$best = $version;
+		}
+	}
+	return $best;
+}
+
+/**
+ * Compares two versions. An empty or malformed right side counts as lower than anything.
+ *
+ * @param string $left  Well formed version.
+ * @param string $right Version or ''.
+ * @return int -1, 0 or 1.
+ */
+function site_dispatch_version_order( string $left, string $right ): int {
+	$a = site_dispatch_version_parts( $left );
+	$b = site_dispatch_version_parts( $right );
+	if ( null === $a ) {
+		return -1;
+	}
+	if ( null === $b ) {
+		return 1;
+	}
+	return site_dispatch_compare_versions( $a, $b );
 }
 
 /**
@@ -327,6 +382,55 @@ function site_dispatch_store_update( ?array $update ): void {
 }
 
 /**
+ * The high-water mark of this site: the stored one or the installed version, whichever is higher.
+ *
+ * @return string
+ */
+function site_dispatch_high_water(): string {
+	$raw = get_option( SITE_DISPATCH_HIGH_WATER_OPTION, '' );
+	return site_dispatch_highest_version( array( is_string( $raw ) ? $raw : '', SITE_DISPATCH_VERSION ) );
+}
+
+/**
+ * Stores a risen high-water mark, without autoload.
+ *
+ * @param string $version Well formed version.
+ */
+function site_dispatch_store_high_water( string $version ): void {
+	if ( 1 !== preg_match( SITE_DISPATCH_VERSION_PATTERN, $version ) ) {
+		return;
+	}
+	delete_option( SITE_DISPATCH_HIGH_WATER_OPTION );
+	add_option( SITE_DISPATCH_HIGH_WATER_OPTION, $version, '', false );
+}
+
+/**
+ * Names of the PHP extensions the signed update needs and the server lacks.
+ *
+ * @param bool $sodium sodium_crypto_sign_verify_detached() exists.
+ * @param bool $zip    ZipArchive exists.
+ * @return array<int, string> Empty when everything is there.
+ */
+function site_dispatch_missing_extensions( bool $sodium, bool $zip ): array {
+	$missing = array();
+	if ( ! $sodium ) {
+		$missing[] = 'sodium';
+	}
+	if ( ! $zip ) {
+		$missing[] = 'zip';
+	}
+	return $missing;
+}
+
+/**
+ * Action "upgrader_process_complete": a package handed over but never unpacked (the upgrader
+ * stopped in between) must not refuse a later unpacking in the same request.
+ */
+function site_dispatch_forget_package(): void {
+	Site_Dispatch_Memo::$package = null;
+}
+
+/**
  * Verdict on a manifest for this installation.
  *
  * @param string $manifest_bytes The manifest.
@@ -370,7 +474,10 @@ function site_dispatch_update_check(): void {
 		}
 	}
 	$stored = site_dispatch_read_stored( get_option( SITE_DISPATCH_UPDATE_OPTION, null ) );
-	$next   = site_dispatch_next_update( $stored, $fetch, $verdict, $manifest_bytes, $sig_raw, time() );
+	$next   = site_dispatch_next_update( $stored, $fetch, $verdict, $manifest_bytes, $sig_raw, time(), site_dispatch_high_water() );
+	if ( isset( $next['high_water'] ) ) {
+		site_dispatch_store_high_water( $next['high_water'] );
+	}
 	if ( 'delete' === $next['action'] ) {
 		site_dispatch_store_update( null );
 	} elseif ( 'store' === $next['action'] && isset( $next['update'] ) ) {
@@ -584,9 +691,18 @@ function site_dispatch_source_selection( $source, $remote_source, $upgrader, $ho
 	if ( ! is_string( $source ) || ! is_string( $remote_source ) ) {
 		return site_dispatch_update_refused();
 	}
+	// The package handed over in pre_download is cleared by the hash check right before unpacking.
+	// If it is still there, that check never ran and WordPress took another way to this point.
+	if ( null !== Site_Dispatch_Memo::$package ) {
+		Site_Dispatch_Memo::$package = null;
+		return site_dispatch_update_refused();
+	}
+	// The unpacked folder lives where WP_Filesystem put it, which on FTP or SSH hosts is not a path
+	// PHP can read. Listing it through WP_Filesystem works on every method.
+	global $wp_filesystem;
 	$expected = untrailingslashit( $remote_source ) . '/' . SITE_DISPATCH_SLUG;
-	$listing  = is_dir( $remote_source ) ? scandir( $remote_source ) : false;
-	$entries  = is_array( $listing ) ? array_values( array_diff( $listing, array( '.', '..' ) ) ) : array();
+	$listing  = $wp_filesystem instanceof WP_Filesystem_Base ? $wp_filesystem->dirlist( $remote_source, false, false ) : false;
+	$entries  = is_array( $listing ) ? array_keys( $listing ) : array();
 	if ( untrailingslashit( $source ) !== $expected || array( SITE_DISPATCH_SLUG ) !== $entries ) {
 		return site_dispatch_update_refused();
 	}

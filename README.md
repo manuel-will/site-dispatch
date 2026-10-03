@@ -60,6 +60,12 @@ A release is a commit, a ZIP built from it, a manifest and a signature over the 
 5. `node tools/finish-release.mjs --publish` creates the GitHub release with the GitHub CLI. The
    commit has to be pushed before.
 
+Versions only go up. `releases/latest` is GitHub's newest release by date, not by number, and every
+site remembers the highest version it has seen validly signed and ignores anything lower. So never
+publish a lower version after a higher one, and after deleting a release give the next one a
+higher version than the deleted one. A bad release is recalled by deleting it within the waiting
+period or by publishing a higher version.
+
 A key change is a release like any other: new keys in `includes/keys.php`, new hash in
 `tools/production-pins.json` and in `.gitleaks.toml`, signed with a key the installed version knows.
 

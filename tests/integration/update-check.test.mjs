@@ -229,9 +229,36 @@ test( 'deleted release drops the waiting update', async () => {
 	assert.equal( await check(), null );
 } );
 
-test( 'release that was replaced by an older one drops the waiting update', async () => {
-	await storedAfter( good() );
+test( 'an older signed release served again is ignored, the waiting update stays', async () => {
+	// Replay: every manifest ever published stays validly signed. Whoever controls the release page
+	// can serve an old one as latest, but the site remembers the highest version it has seen.
+	const first = await storedAfter( good() );
+	assert.deepEqual( await storedAfter( good( '0.1.0' ) ), first, 'the installed version served again drops nothing' );
+	const newer = await storedAfter( good( '0.1.2' ) );
+	assert.equal( newer.version, '0.1.2' );
+	assert.deepEqual( await storedAfter( good( '0.1.1' ) ), newer, 'the replayed 0.1.1 neither drops nor replaces 0.1.2' );
+	const mark = await site.php( `
+		global $wpdb;
+		wp_cache_flush();
+		return $wpdb->get_row( "SELECT option_value, autoload FROM {$wpdb->options} WHERE option_name = 'site_dispatch_high_water'", ARRAY_A );
+	` );
+	assert.equal( mark.option_value, '0.1.2' );
+	assert.ok( [ 'no', 'off' ].includes( mark.autoload ), 'autoload is ' + mark.autoload );
+} );
+
+test( 'after a deleted release a lower version is ignored, the same one is taken again', async () => {
+	await storedAfter( good( '0.1.2' ) );
+	release.remove();
+	assert.equal( await check(), null );
+	assert.equal( await storedAfter( good( '0.1.1' ) ), null, 'below the mark' );
+	assert.equal( ( await storedAfter( good( '0.1.2' ) ) ).version, '0.1.2', 'at the mark' );
+} );
+
+test( 'a release of the installed version stores nothing and leaves no mark', async () => {
+	// The mark starts at the installed version: a release at that version is not newer, so nothing
+	// is stored, and nothing below or at the installed version ever raises the mark.
 	assert.equal( await storedAfter( good( '0.1.0' ) ), null );
+	assert.equal( await site.php( `wp_cache_flush(); return get_option( 'site_dispatch_high_water', null );` ), null );
 } );
 
 test( 'server that does not answer keeps the waiting update', async () => {

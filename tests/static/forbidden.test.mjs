@@ -119,8 +119,8 @@ test( 'the public keys and the release address are read only from their constant
 } );
 
 test( 'the only Ajax action is the admin-only redeem poll', () => {
-	const actions = hits( /add_action\s*\(\s*'wp_ajax_/ );
-	assert.deepEqual( actions, [ "site-dispatch.php:78: add_action( 'wp_ajax_site_dispatch_redeem', 'site_dispatch_ajax_redeem' );" ] );
+	const actions = hits( /add_action\s*\(\s*'wp_ajax_/ ).map( ( hit ) => hit.replace( /^site-dispatch\.php:\d+: /, 'site-dispatch.php: ' ) );
+	assert.deepEqual( actions, [ "site-dispatch.php: add_action( 'wp_ajax_site_dispatch_redeem', 'site_dispatch_ajax_redeem' );" ] );
 } );
 
 test( 'the admin script never writes HTML and never evaluates code', () => {

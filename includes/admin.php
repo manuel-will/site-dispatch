@@ -163,6 +163,30 @@ function site_dispatch_legacy_notice(): void {
 }
 
 /**
+ * Tells administrators when the server lacks what the signed update needs. Without this notice a
+ * site would simply never update and the install path would blame the release.
+ */
+function site_dispatch_capability_notice(): void {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		return;
+	}
+	$missing = site_dispatch_missing_extensions( function_exists( 'sodium_crypto_sign_verify_detached' ), class_exists( 'ZipArchive' ) );
+	if ( array() === $missing ) {
+		return;
+	}
+	printf(
+		'<div class="notice notice-error"><p>%s</p></div>',
+		esc_html(
+			sprintf(
+				/* translators: %s: comma separated list of PHP extension names */
+				__( 'Site Dispatch cannot verify or install its updates on this server. Missing PHP extension: %s. Ask the host to enable it.', 'site-dispatch' ),
+				implode( ', ', $missing )
+			)
+		)
+	);
+}
+
+/**
  * One row of the status table.
  *
  * @param string $label Label, already translated.

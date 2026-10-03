@@ -273,11 +273,15 @@ fails, because the namespace is part of the signed blob.
 3. A version seen for the first time gets a **local** timestamp. WordPress is offered the update
    72 hours later, or at once if "install updates immediately" is on (default off). A manifest with
    other bytes for the same version counts as new and starts the 72 hours again.
-4. Recall. A waiting update is dropped when the latest release is gone (`404` on the manifest) or
-   when a validly signed manifest is not newer than the installed version or does not fit the
-   site. A transport error, any other status and an invalid signature change nothing. So deleting a
-   release cancels it on every site at its next daily check, and nobody without a signing key can
-   cancel or restart a waiting update.
+4. Recall and the high-water mark. The site remembers the highest version it has ever seen with a
+   valid signature (option `site_dispatch_high_water`, never below the installed version or a
+   waiting one). A validly signed manifest **below** that mark is a replay of an old release and
+   changes nothing. At or above the mark: a waiting update is dropped when the latest release is
+   gone (`404` on the manifest) or when the signed manifest is not newer than the installed version
+   or does not fit the site. A transport error, any other status and an invalid signature change
+   nothing. So deleting a release cancels it on every site at its next daily check. Whoever
+   controls the release page without a signing key can delete, but can neither start nor restore an
+   update and cannot move a site to a release it has already seen superseded.
 5. Install, automatic or by click: verify the stored manifest again, check the waiting period
    again, download the ZIP from the address built from the manifest (the package address WordPress
    hands over is ignored), check the size, compare SHA-512 of the local file with `hash_equals`,
@@ -290,9 +294,12 @@ fails, because the namespace is part of the signed blob.
    the plugin out of its answer. The plugin does not rely on that: at every read of the update list
    it removes any entry for itself that it did not make.
 7. A key change is a normal release with new built-in public keys, signed by a key the installed
-   version already knows.
+   version already knows. Both built-in keys have the same power: the reserve key signs releases
+   exactly like the work key.
 
-A bad release is recalled with a higher version, or deleted within the waiting period.
+A bad release is recalled with a higher version, or deleted within the waiting period. After a
+deletion the next release has to carry a higher version than the deleted one, because the sites
+remember what they have seen.
 
 The plugin needs `ZipArchive` to look into the ZIP before unpacking. Without it no update installs.
 

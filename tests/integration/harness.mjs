@@ -258,7 +258,7 @@ echo "\\n<<<RESULT>>>" . json_encode( array( 'result' => $site_dispatch_test_res
 
 		async reset() {
 			await site.php( `
-				foreach ( array( 'site_dispatch_state', 'site_dispatch_update', 'site_dispatch_early_updates', 'site_dispatch_last_report' ) as $name ) {
+				foreach ( array( 'site_dispatch_state', 'site_dispatch_update', 'site_dispatch_high_water', 'site_dispatch_early_updates', 'site_dispatch_last_report' ) as $name ) {
 					delete_option( $name );
 				}
 				delete_transient( 'site_dispatch_enroll' );
