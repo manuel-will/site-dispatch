@@ -5,6 +5,8 @@
 	"scripts": {
 		"test": "node --test --test-concurrency=1 \"tests/integration/*.test.mjs\"",
 		"test:tools": "node --test \"tests/tools/*.test.mjs\"",
+		"test:static": "node --test \"tests/static/*.test.mjs\"",
+		"test:js": "node --test \"tests/js/*.test.mjs\"",
 		"playground": "node tests/integration/serve.mjs"
 	},
 	"devDependencies": {

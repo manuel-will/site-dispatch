@@ -17,7 +17,10 @@ composer vectors                       # recomputes the test vectors from PROTOC
 composer test                          # PHPUnit, pure functions without WordPress
 composer stan                          # PHPStan level max on the plugin code
 composer cs                            # PHPCS with the WordPress rules
+composer compat                        # PHPCompatibilityWP, PHP 7.4 and newer
 npm install
+npm run test:static                    # forbidden constructs, fixed keys and release address
+npm run test:js                        # assets/admin.js in a vm sandbox
 npm run test:tools                     # release tools, against throwaway repositories in a temp folder
 npm test                               # integration tests in WordPress Playground, about 25 minutes
 npm run playground                     # the admin page in a local Playground, with the fake server
