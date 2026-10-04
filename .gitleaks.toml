@@ -14,6 +14,15 @@ regexes = [
 ]
 
 [[allowlists]]
+description = "The two built-in Ed25519 PUBLIC keys of includes/keys.php (quoted as search anchors in qa/red-runs-mutations.mjs). Public by design, not secrets. Changes with every key change."
+regexTarget = "secret"
+regexes = [
+	'''^'?SrtmPWXaVFE/pf493gYke3MPHUsQTkFw9yopZVmu0ps='?$''',
+	'''^'?oC5qEUmBep0woFhjzuN8B3sRxIdRDCSoQNZfxZxEOnc='?$''',
+	'''^'?SrtmPWXaVFE/pf493gYke3MPHUsQTkFw9yopZVmu0p='?$''',
+]
+
+[[allowlists]]
 description = "SHA-256 of the public file includes/keys.php in tools/production-pins.json (a hash of public keys, not a secret). Changes with every key change."
 regexTarget = "secret"
 regexes = [

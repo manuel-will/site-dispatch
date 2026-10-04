@@ -258,7 +258,17 @@ test( 'host that is not valid never causes a request', async () => {
 		'',
 	];
 	for ( const host of hosts ) {
-		assert.equal( await request( host ), false, host );
+		// The test reroute refuses every host but the fake, so a request to a bad host would fail
+		// anyway. Count the attempts before the reroute sees them: there must be none.
+		const seen = await site.php( `
+			$attempts = 0;
+			add_filter( 'pre_http_request', static function ( $pre ) use ( &$attempts ) {
+				$attempts++;
+				return $pre;
+			}, 1 );
+			return array( site_dispatch_enroll_request( ${ JSON.stringify( host ) } ), $attempts );
+		` );
+		assert.deepEqual( seen, [ false, 0 ], host );
 	}
 	assert.equal( fake.requests.length, 0 );
 	assert.equal( await transient(), false );
