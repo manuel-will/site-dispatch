@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Site Dispatch
  * Description:       Sends a signed, read-only status report (plugins, available updates, WordPress and server versions) to a server you connect it to. No inbound endpoints, no remote commands.
- * Version:           0.1.0
+ * Version:           0.1.2
  * Requires at least: 6.4
  * Requires PHP:      7.4
  * Update URI:        https://github.com/manuel-will/site-dispatch
@@ -21,7 +21,7 @@ if ( defined( 'SITE_DISPATCH_VERSION' ) ) {
 	return;
 }
 
-const SITE_DISPATCH_VERSION = '0.1.0';
+const SITE_DISPATCH_VERSION = '0.1.2';
 const SITE_DISPATCH_FILE    = __FILE__;
 
 require __DIR__ . '/includes/verify.php';
