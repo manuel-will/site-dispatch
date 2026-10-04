@@ -1,34 +1,38 @@
-# Red runs, 2026-10-04T09:42Z
+# Red runs, 2026-10-04T15:28Z
 
-Output of `node qa/red-runs.mjs` (independent QA run, phase 6), merged from several invocations.
-Every mutation edits a throwaway copy of the production code; the checkout is hashed before and
-after by every invocation. Red means: with the mutation applied the named case failed (or its
-suite crashed before it) while the unmutated copy was green before and after.
+Output of `node qa/red-runs.mjs`, merged from several invocations. Every mutation edits a throwaway
+copy of the production code; the checkout is hashed before and after by every invocation. Red
+means: with the mutation applied the named case failed (or its suite crashed before it) while the
+unmutated copy was green before and after.
 
-How the Playground part was run: a background command of this session dies after two hours, and the
-first two invocations (budget 210 min) were killed before writing their report. Their stderr logs
-(one line per mutation: RED, gap or MISS) survived. The remaining mutations ran in chunks
-(`--specs`, `--limit`, `--skip=<earlier logs>`); a mutation that was red in an earlier log is
-reported as "yes (earlier run)" and not run again. Mutations that missed in their first run were
-corrected and rerun alone (report: accepted report plans no retry; enroll: host that is not valid
-never causes a request; update-install: zip with one changed byte is refused, validly signed zip is
-refused before unpacking: absolute path; update-check: redirect to a relative address ...); the
-first, missing attempt is superseded by the corrected mutation shown here. One case was reclassified
-as a coverage gap after its first run (admin: key is not part of the autoloaded options, the option
-is written by the test harness).
+Three rounds. The independent QA agent of phase 6 wrote `qa/red-runs-mutations.mjs` and ran it on
+2026-10-03 in chunks (`--specs`, `--limit`, `--skip=<earlier logs>`); mutations that missed in
+their first run were corrected and rerun alone, the corrected row replaces the first attempt. After
+the fixes of the phase 6 review (commit 674c7c1: high-water mark, WP_Filesystem listing,
+second-hash invariant, release host pattern, multisite guard, missing-extension notice) the session
+moved 34 anchors, added 17 mutations for the new tests and reran on 2026-10-04 the parts whose code
+or mutations had changed. After the second opinion (commit a095256: recall floor, one signing per
+version, monotonic marks, no stale package memo) it added 9 more mutations and reran PHPUnit and
+tools in full and the Playground file update-check in full; update-install rows marked "earlier
+run" were red on the same code except for the pre_download line that forgets a leftover package,
+which the integration tests cover green. smoke, uninstall and update-keys ran on 2026-10-04 before
+the second opinion (their code did not change afterwards except one line in uninstall.php, which
+the uninstall tests cover green). The other Playground files (hygiene, silent, report, enroll,
+admin, update-offer) are unchanged since 2026-10-03 and keep that run's rows.
 
 "two layers" / "three layers" in a reason: a single weakened check is hidden by a second (third)
 line of defence, so the mutation weakens both; the case is proven to fail, but a single realistic
 slip in that place would not be caught by this test alone. Entries under "Coverage gap mutations"
-are expected to survive and say why.
+are expected to survive and say why. One case was reclassified as a coverage gap after its first
+run (admin: key is not part of the autoloaded options, the option is written by the test harness).
 
-The PHPUnit cases are all 199 (data sets counted as the runner counts them). Test added by this
-run: `tests/integration/hygiene.test.mjs` (debug.log never carries key or secret, leak inventory
-7). Test strengthened: `tests/integration/enroll.test.mjs`, "host that is not valid never causes a
-request" now counts HTTP attempts before the test reroute (see qa-summary).
+Tests added by the QA agent: `tests/integration/hygiene.test.mjs` (debug.log never carries key or
+secret, leak inventory 7). Strengthened: `tests/integration/enroll.test.mjs`, "host that is not
+valid never causes a request" counts HTTP attempts before the test reroute. The red proof of
+`tests/static` and `tests/js` lives in `qa/static-red-runs.mjs` (34 of 34 on 2026-10-04).
 
-Repo files changed during the runs: php+tools: none; consolidation: none; chunk F: none; chunk B2: none; chunk G: run did not finish; chunk B3: none; chunk H: none; chunk A3: none; chunk I: none.
-Runtimes: php+tools 7 min, consolidation 17 min, chunk F 9 min, chunk B2 73 min, chunk G ?, chunk B3 77 min, chunk H 7 min, chunk A3 89 min, chunk I 4 min.
+Repo files changed during the runs: php+tools (2026-10-04): none; update-check (2026-10-04): none; update-install (2026-10-04): none; smoke and uninstall (2026-10-04): run did not finish; update-keys (2026-10-04): none; consolidation (2026-10-03): none; chunk F (2026-10-03): none; chunk B2 (2026-10-03): none; chunk I (2026-10-03): none.
+Runtimes: php+tools (2026-10-04) 6 min, update-check (2026-10-04) 94 min, update-install (2026-10-04) 44 min, smoke and uninstall (2026-10-04) ?, update-keys (2026-10-04) 6 min, consolidation (2026-10-03) 17 min, chunk F (2026-10-03) 9 min, chunk B2 (2026-10-03) 73 min, chunk I (2026-10-03) 4 min.
 
 ## phpunit
 
@@ -59,7 +63,7 @@ Runtimes: php+tools 7 min, consolidation 17 min, chunk F 9 min, chunk B2 73 min,
 | 23 | ManifestAcceptableTest::test_higher_version_is_accepted | includes/verify.php | arguments of the version comparison swapped | yes (fail) | ManifestAcceptableTest::test_lower_version_is_rejected; ManifestAcceptableTest::test_versions_compare_as_numbers_not_as_text; ManifestAcceptableTest::test_numbers_beyond_the_integer_range_still_compare; ManifestAcceptableTest::test_exactly_the_required_versions_are_enough; ManifestAcceptableTest::test_version_strings_with_a_vendor_suffix_are_read_by_their_numbers; UpdaterTest::test_judge_valid_with_key_a; UpdaterTest::test_judge_valid_with_key_b; UpdaterTest::test_judge_compares_numbers_not_text |
 | 24 | ManifestAcceptableTest::test_same_version_is_rejected | includes/verify.php | same version accepted | yes (fail) | ManifestAcceptableTest::test_leading_zeros_do_not_make_a_version_higher |
 | 25 | ManifestAcceptableTest::test_lower_version_is_rejected | includes/verify.php | any different version accepted | yes (fail) | ManifestAcceptableTest::test_versions_compare_as_numbers_not_as_text; ManifestAcceptableTest::test_numbers_beyond_the_integer_range_still_compare |
-| 26 | ManifestAcceptableTest::test_versions_compare_as_numbers_not_as_text | includes/verify.php | versions compared as text | yes (fail) | UpdaterTest::test_judge_compares_numbers_not_text |
+| 26 | ManifestAcceptableTest::test_versions_compare_as_numbers_not_as_text | includes/verify.php | versions compared as text | yes (fail) | UpdaterTest::test_judge_compares_numbers_not_text; UpdaterTest::test_highest_version_skips_malformed_entries |
 | 27 | ManifestAcceptableTest::test_leading_zeros_do_not_make_a_version_higher | includes/verify.php | leading zeros kept on one side | yes (fail) | ManifestAcceptableTest::test_numbers_beyond_the_integer_range_still_compare |
 | 28 | ManifestAcceptableTest::test_numbers_beyond_the_integer_range_still_compare | includes/verify.php | parts cast to int, overflow makes them equal | yes (fail) |  |
 | 29 | ManifestAcceptableTest::test_php_that_is_too_old_is_rejected | includes/verify.php | PHP minimum not checked | yes (fail) | UpdaterTest::test_judge_php_too_old |
@@ -144,7 +148,7 @@ Runtimes: php+tools 7 min, consolidation 17 min, chunk F 9 min, chunk B2 73 min,
 | 108 | UpdaterTest::test_redirect_is_refused with data set "line break at end" | includes/updater.php | $ instead of \z | yes (fail) |  |
 | 109 | UpdaterTest::test_redirect_is_refused with data set "line break inside" | includes/updater.php | printable class replaced by not-backslash | yes (fail) | UpdaterTest::test_redirect_is_refused with data set "space"; UpdaterTest::test_redirect_is_refused with data set "line break at end" |
 | 110 | UpdaterTest::test_redirect_is_refused with data set "too long" | includes/updater.php | length limit dropped | yes (fail) |  |
-| 111 | UpdaterTest::test_redirect_is_refused with data set "empty" | includes/updater.php | error check instead of match check on preg_match | yes (fail) | UpdaterTest::test_redirect_is_refused with data set "http"; UpdaterTest::test_redirect_is_refused with data set "relative"; UpdaterTest::test_redirect_is_refused with data set "protocol relative"; UpdaterTest::test_redirect_is_refused with data set "user in the address"; UpdaterTest::test_redirect_is_refused with data set "port 8443"; UpdaterTest::test_redirect_is_refused with data set "upper case host"; UpdaterTest::test_redirect_is_refused with data set "ip literal v6"; UpdaterTest::test_redirect_is_refused with data set "no path"; UpdaterTest::test_redirect_is_refused with data set "space"; UpdaterTest::test_redirect_is_refused with data set "line break at end"; UpdaterTest::test_redirect_is_refused with data set "line break inside"; UpdaterTest::test_redirect_is_refused with data set "other scheme"; UpdaterTest::test_redirect_is_refused with data set "upper case scheme"; UpdaterTest::test_redirect_is_refused with data set "backslash after host" |
+| 111 | UpdaterTest::test_redirect_is_refused with data set "empty" | includes/updater.php | error check instead of match check on preg_match | yes (fail) | UpdaterTest::test_redirect_is_refused with data set "http"; UpdaterTest::test_redirect_is_refused with data set "relative"; UpdaterTest::test_redirect_is_refused with data set "protocol relative"; UpdaterTest::test_redirect_is_refused with data set "user in the address"; UpdaterTest::test_redirect_is_refused with data set "port 8443"; UpdaterTest::test_redirect_is_refused with data set "upper case host"; UpdaterTest::test_redirect_is_refused with data set "ip literal v6"; UpdaterTest::test_redirect_is_refused with data set "ip literal v4"; UpdaterTest::test_redirect_is_refused with data set "host without a dot"; UpdaterTest::test_redirect_is_refused with data set "numeric top level"; UpdaterTest::test_redirect_is_refused with data set "punycode label"; UpdaterTest::test_redirect_is_refused with data set "no path"; UpdaterTest::test_redirect_is_refused with data set "space"; UpdaterTest::test_redirect_is_refused with data set "line break at end"; UpdaterTest::test_redirect_is_refused with data set "line break inside"; UpdaterTest::test_redirect_is_refused with data set "other scheme"; UpdaterTest::test_redirect_is_refused with data set "upper case scheme"; UpdaterTest::test_redirect_is_refused with data set "backslash after host" |
 | 112 | UpdaterTest::test_redirect_is_refused with data set "other scheme" | includes/updater.php | any scheme allowed | yes (fail) | UpdaterTest::test_redirect_is_refused with data set "http" |
 | 113 | UpdaterTest::test_redirect_is_refused with data set "upper case scheme" | includes/updater.php | case-insensitive address pattern | yes (fail) | UpdaterTest::test_redirect_is_refused with data set "upper case host" |
 | 114 | UpdaterTest::test_redirect_is_refused with data set "backslash after host" | includes/updater.php | backslashes normalised to slashes | yes (fail) |  |
@@ -172,7 +176,7 @@ Runtimes: php+tools 7 min, consolidation 17 min, chunk F 9 min, chunk B2 73 min,
 | 136 | UpdaterTest::test_judge_signed_manifest_with_a_path_as_zip | includes/verify.php | base name of the zip compared | yes (fail) | ParseManifestTest::test_zip_with_parent_path_is_rejected; ParseManifestTest::test_zip_as_url_is_rejected |
 | 137 | UpdaterTest::test_judge_same_version | includes/updater.php | same version not refused by the verdict | yes (fail) |  |
 | 138 | UpdaterTest::test_judge_lower_version | includes/updater.php | only the same version refused | yes (fail) |  |
-| 139 | UpdaterTest::test_judge_compares_numbers_not_text | includes/verify.php | versions compared as text | yes (fail) | ManifestAcceptableTest::test_versions_compare_as_numbers_not_as_text |
+| 139 | UpdaterTest::test_judge_compares_numbers_not_text | includes/verify.php | versions compared as text | yes (fail) | ManifestAcceptableTest::test_versions_compare_as_numbers_not_as_text; UpdaterTest::test_highest_version_skips_malformed_entries |
 | 140 | UpdaterTest::test_judge_php_too_old | includes/verify.php | PHP minimum not checked | yes (fail) | ManifestAcceptableTest::test_php_that_is_too_old_is_rejected |
 | 141 | UpdaterTest::test_judge_wordpress_too_old | includes/verify.php | WordPress minimum not checked | yes (fail) | ManifestAcceptableTest::test_wordpress_that_is_too_old_is_rejected |
 | 142 | UpdaterTest::test_judge_installed_version_without_form | includes/updater.php | installed version not checked for its form | yes (fail) |  |
@@ -189,52 +193,68 @@ Runtimes: php+tools 7 min, consolidation 17 min, chunk F 9 min, chunk B2 73 min,
 | 153 | UpdaterTest::test_stored_damaged_option_is_refused with data set "first seen negative" | includes/updater.php | negative time stamp accepted | yes (fail) |  |
 | 154 | UpdaterTest::test_next_failed_fetch_keeps_the_stored_update | includes/updater.php | a failed fetch deletes the waiting update | yes (fail) | UpdaterTest::test_next_unknown_fetch_result_keeps_the_stored_update |
 | 155 | UpdaterTest::test_next_unknown_fetch_result_keeps_the_stored_update | includes/updater.php | only the known failure keeps, anything else goes on | yes (fail) |  |
-| 156 | UpdaterTest::test_next_missing_release_deletes | includes/updater.php | a deleted release keeps the waiting update | yes (fail) |  |
-| 157 | UpdaterTest::test_next_invalid_release_keeps_the_stored_update | includes/updater.php | an invalid signature cancels the waiting update | yes (fail) |  |
-| 158 | UpdaterTest::test_next_release_that_is_not_newer_deletes | includes/updater.php | not newer no longer deletes | yes (fail) |  |
-| 159 | UpdaterTest::test_next_release_that_does_not_fit_deletes | includes/updater.php | unfit no longer deletes | yes (fail) |  |
-| 160 | UpdaterTest::test_next_same_release_keeps_first_seen | includes/updater.php | every check stores again and restarts the clock | yes (fail) |  |
-| 161 | UpdaterTest::test_next_first_release_is_stored_with_the_local_time | includes/updater.php | wall clock instead of the given time | yes (fail) | UpdaterTest::test_next_new_version_starts_the_clock_again; UpdaterTest::test_next_other_bytes_for_the_same_version_start_the_clock_again |
-| 162 | UpdaterTest::test_next_new_version_starts_the_clock_again | includes/updater.php | any stored update is kept, a new version never arrives | yes (fail) | UpdaterTest::test_next_other_bytes_for_the_same_version_start_the_clock_again |
-| 163 | UpdaterTest::test_next_other_bytes_for_the_same_version_start_the_clock_again | includes/updater.php | manifest bytes not compared, only the version | yes (fail) |  |
-| 164 | UpdaterTest::test_next_manifest_that_does_not_parse_keeps | includes/updater.php | an unreadable manifest deletes | yes (fail) |  |
-| 165 | UpdaterTest::test_due_not_before_72_hours | includes/updater.php | digit lost in the delay | yes (fail) |  |
-| 166 | UpdaterTest::test_due_at_72_hours | includes/updater.php | off-by-one at exactly 72 hours | yes (fail) |  |
-| 167 | UpdaterTest::test_due_at_once_with_the_switch | includes/updater.php | switch for immediate updates ignored | yes (fail) |  |
-| 168 | UpdaterTest::test_due_first_seen_in_the_future_waits | includes/updater.php | a stamp in the future counts as due | yes (fail) |  |
-| 169 | UpdaterTest::test_names_good_list | includes/updater.php | main file name slip | yes (fail) |  |
-| 170 | UpdaterTest::test_names_are_refused with data set "empty list" | includes/updater.php | an empty archive passes | yes (fail) |  |
-| 171 | UpdaterTest::test_names_are_refused with data set "without the main file" | includes/updater.php | main file presence not checked | yes (fail) | UpdaterTest::test_names_are_refused with data set "empty list" |
-| 172 | UpdaterTest::test_names_are_refused with data set "second top folder" | includes/updater.php | any folder accepted | yes (fail) | UpdaterTest::test_names_are_refused with data set "folder with suffix"; UpdaterTest::test_names_are_refused with data set "drive letter"; UpdaterTest::test_names_are_refused with data set "upper case folder" |
-| 173 | UpdaterTest::test_names_are_refused with data set "file on top level" | includes/updater.php | top level files tolerated | yes (fail) |  |
-| 174 | UpdaterTest::test_names_are_refused with data set "folder with suffix" | includes/updater.php | prefix compared without the slash | yes (fail) |  |
-| 175 | UpdaterTest::test_names_are_refused with data set "path up at the start" | includes/updater.php | prefix and dot segments not checked (two layers) | yes (fail) | UpdaterTest::test_names_are_refused with data set "second top folder"; UpdaterTest::test_names_are_refused with data set "file on top level"; UpdaterTest::test_names_are_refused with data set "folder with suffix"; UpdaterTest::test_names_are_refused with data set "path up in the middle"; UpdaterTest::test_names_are_refused with data set "path up at the end"; UpdaterTest::test_names_are_refused with data set "single dot"; UpdaterTest::test_names_are_refused with data set "drive letter"; UpdaterTest::test_names_are_refused with data set "upper case folder" |
-| 176 | UpdaterTest::test_names_are_refused with data set "path up in the middle" | includes/updater.php | parent segment not refused | yes (fail) | UpdaterTest::test_names_are_refused with data set "path up at the end" |
-| 177 | UpdaterTest::test_names_are_refused with data set "path up at the end" | includes/updater.php | last segment always dropped as the file name | yes (fail) |  |
-| 178 | UpdaterTest::test_names_are_refused with data set "single dot" | includes/updater.php | single dot segment not refused | yes (fail) |  |
-| 179 | UpdaterTest::test_names_are_refused with data set "double slash" | includes/updater.php | empty segment not refused | yes (fail) |  |
-| 180 | UpdaterTest::test_names_are_refused with data set "backslash" | includes/updater.php | backslashes normalised for the prefix check and allowed by the pattern (two layers) | yes (fail) |  |
-| 181 | UpdaterTest::test_names_are_refused with data set "absolute path" | includes/updater.php | leading slashes tolerated in the prefix check and when splitting (two layers) | yes (fail) |  |
-| 182 | UpdaterTest::test_names_are_refused with data set "drive letter" | includes/updater.php | prefix found anywhere in the name | yes (fail) |  |
-| 183 | UpdaterTest::test_names_are_refused with data set "null byte" | includes/updater.php | printable class replaced by not-backslash | yes (fail) |  |
-| 184 | UpdaterTest::test_names_are_refused with data set "empty name" | includes/updater.php | foreign entries skipped instead of refusing the archive | yes (fail) | UpdaterTest::test_names_are_refused with data set "second top folder"; UpdaterTest::test_names_are_refused with data set "file on top level"; UpdaterTest::test_names_are_refused with data set "folder with suffix"; UpdaterTest::test_names_are_refused with data set "path up at the start"; UpdaterTest::test_names_are_refused with data set "backslash"; UpdaterTest::test_names_are_refused with data set "absolute path"; UpdaterTest::test_names_are_refused with data set "drive letter"; UpdaterTest::test_names_are_refused with data set "not text"; UpdaterTest::test_names_are_refused with data set "upper case folder" |
-| 185 | UpdaterTest::test_names_are_refused with data set "not text" | includes/updater.php | non-text entries skipped | yes (fail) |  |
-| 186 | UpdaterTest::test_names_are_refused with data set "upper case folder" | includes/updater.php | case-insensitive prefix check | yes (fail) |  |
-| 187 | VerifySignatureTest::test_blob_matches_the_documented_vector | includes/verify.php | little endian length in the blob | yes (fail) | VerifySignatureTest::test_fixed_vector_from_the_protocol_verifies |
-| 188 | VerifySignatureTest::test_fixed_vector_from_the_protocol_verifies | includes/verify.php | wrong hash over the message, the test keys still agree with themselves | yes (fail) | VerifySignatureTest::test_blob_matches_the_documented_vector |
-| 189 | VerifySignatureTest::test_valid_signature_of_key_a_is_accepted | includes/verify.php | first key skipped | yes (fail) | UpdaterTest::test_judge_valid_with_key_a; UpdaterTest::test_judge_same_version; UpdaterTest::test_judge_lower_version; UpdaterTest::test_judge_compares_numbers_not_text; UpdaterTest::test_judge_php_too_old; UpdaterTest::test_judge_wordpress_too_old; VerifySignatureTest::test_fixed_vector_from_the_protocol_verifies |
-| 190 | VerifySignatureTest::test_valid_signature_of_key_b_is_accepted | includes/verify.php | only the first key checked | yes (fail) | UpdaterTest::test_judge_valid_with_key_b |
-| 191 | VerifySignatureTest::test_signature_of_a_foreign_key_is_rejected | includes/verify.php | result of the check thrown away | yes (fail) | UpdaterTest::test_judge_unknown_key; UpdaterTest::test_judge_flipped_bit_in_the_signature; UpdaterTest::test_judge_signature_for_the_namespace_git; VerifySignatureTest::test_fixed_vector_from_the_protocol_verifies; VerifySignatureTest::test_one_flipped_bit_in_the_manifest_is_rejected; VerifySignatureTest::test_one_flipped_bit_in_the_signature_is_rejected; VerifySignatureTest::test_signature_made_for_namespace_git_is_rejected |
-| 192 | VerifySignatureTest::test_one_flipped_bit_in_the_manifest_is_rejected | includes/verify.php | blob hashes the namespace instead of the message | yes (fail) | VerifySignatureTest::test_blob_matches_the_documented_vector; VerifySignatureTest::test_fixed_vector_from_the_protocol_verifies |
-| 193 | VerifySignatureTest::test_one_flipped_bit_in_the_signature_is_rejected | includes/verify.php | verdict initialised as valid | yes (fail) | UpdaterTest::test_judge_unknown_key; UpdaterTest::test_judge_flipped_bit_in_the_signature; UpdaterTest::test_judge_signature_for_the_namespace_git; VerifySignatureTest::test_fixed_vector_from_the_protocol_verifies; VerifySignatureTest::test_signature_of_a_foreign_key_is_rejected; VerifySignatureTest::test_one_flipped_bit_in_the_manifest_is_rejected; VerifySignatureTest::test_signature_made_for_namespace_git_is_rejected |
-| 194 | VerifySignatureTest::test_signature_of_63_bytes_is_rejected | includes/verify.php | length guard loosened and sodium exception no longer caught (two layers) | yes (fail) | UpdaterTest::test_judge_signature_of_63_and_65_bytes |
-| 195 | VerifySignatureTest::test_signature_of_65_bytes_is_rejected | includes/verify.php | length guard loosened and sodium exception no longer caught (two layers) | yes (fail) | UpdaterTest::test_judge_signature_of_63_and_65_bytes |
-| 196 | VerifySignatureTest::test_empty_key_list_is_rejected | includes/verify.php | fail open without keys | yes (fail) | UpdaterTest::test_judge_empty_key_list |
-| 197 | VerifySignatureTest::test_signature_made_for_namespace_git_is_rejected | includes/verify.php | namespace left out of the signed blob | yes (fail) | UpdaterTest::test_judge_signature_for_the_namespace_git; VerifySignatureTest::test_blob_matches_the_documented_vector; VerifySignatureTest::test_fixed_vector_from_the_protocol_verifies |
-| 198 | VerifySignatureTest::test_key_of_wrong_length_is_rejected | includes/verify.php | key length not checked and sodium exception no longer caught (two layers) | yes (fail) | VerifySignatureTest::test_a_malformed_key_next_to_a_valid_one_rejects_the_whole_list |
-| 199 | VerifySignatureTest::test_a_malformed_key_next_to_a_valid_one_rejects_the_whole_list | includes/verify.php | malformed keys skipped instead of refusing the list | yes (fail) |  |
+| 156 | UpdaterTest::test_next_missing_release_deletes_and_recalls_the_waiting_version | includes/updater.php | a deleted release keeps the waiting update | yes (fail) |  |
+| 157 | UpdaterTest::test_next_missing_release_deletes_and_recalls_the_waiting_version | includes/updater.php | the recall is never remembered | yes (fail) |  |
+| 158 | UpdaterTest::test_next_recalled_version_is_never_taken_again | includes/updater.php | the recall floor is ignored, a deleted release comes back (review C-M1) | yes (fail) |  |
+| 159 | UpdaterTest::test_next_recalled_version_is_never_taken_again | includes/updater.php | off-by-one, the recalled version itself passes the floor | yes (fail) |  |
+| 160 | UpdaterTest::test_next_malformed_recall_floor_counts_as_none | includes/updater.php | a malformed floor blocks every release | yes (fail) |  |
+| 161 | UpdaterTest::test_next_invalid_release_keeps_the_stored_update | includes/updater.php | an invalid signature cancels the waiting update | yes (fail) |  |
+| 162 | UpdaterTest::test_next_release_that_is_not_newer_deletes | includes/updater.php | not newer no longer deletes | yes (fail) | UpdaterTest::test_next_release_at_the_mark_is_handled_as_before |
+| 163 | UpdaterTest::test_next_release_that_does_not_fit_deletes | includes/updater.php | unfit no longer deletes | yes (fail) | UpdaterTest::test_next_higher_release_raises_the_mark |
+| 164 | UpdaterTest::test_next_same_release_keeps_first_seen | includes/updater.php | every check stores again and restarts the clock | yes (fail) | UpdaterTest::test_next_release_at_the_mark_is_handled_as_before; UpdaterTest::test_next_other_bytes_for_the_same_version_are_ignored |
+| 165 | UpdaterTest::test_next_first_release_is_stored_with_the_local_time | includes/updater.php | wall clock instead of the given time | yes (fail) | UpdaterTest::test_next_new_version_starts_the_clock_again |
+| 166 | UpdaterTest::test_next_new_version_starts_the_clock_again | includes/updater.php | any stored update is kept, a new version never arrives | yes (fail) | UpdaterTest::test_next_higher_release_raises_the_mark |
+| 167 | UpdaterTest::test_next_other_bytes_for_the_same_version_are_ignored | includes/updater.php | manifest bytes not compared, only the version | yes (fail) |  |
+| 168 | UpdaterTest::test_next_manifest_that_does_not_parse_keeps | includes/updater.php | an unreadable manifest deletes | yes (fail) |  |
+| 169 | UpdaterTest::test_due_not_before_72_hours | includes/updater.php | digit lost in the delay | yes (fail) |  |
+| 170 | UpdaterTest::test_due_at_72_hours | includes/updater.php | off-by-one at exactly 72 hours | yes (fail) |  |
+| 171 | UpdaterTest::test_due_at_once_with_the_switch | includes/updater.php | switch for immediate updates ignored | yes (fail) |  |
+| 172 | UpdaterTest::test_due_first_seen_in_the_future_waits | includes/updater.php | a stamp in the future counts as due | yes (fail) |  |
+| 173 | UpdaterTest::test_names_good_list | includes/updater.php | main file name slip | yes (fail) |  |
+| 174 | UpdaterTest::test_names_are_refused with data set "empty list" | includes/updater.php | an empty archive passes | yes (fail) |  |
+| 175 | UpdaterTest::test_names_are_refused with data set "without the main file" | includes/updater.php | main file presence not checked | yes (fail) | UpdaterTest::test_names_are_refused with data set "empty list" |
+| 176 | UpdaterTest::test_names_are_refused with data set "second top folder" | includes/updater.php | any folder accepted | yes (fail) | UpdaterTest::test_names_are_refused with data set "folder with suffix"; UpdaterTest::test_names_are_refused with data set "drive letter"; UpdaterTest::test_names_are_refused with data set "upper case folder" |
+| 177 | UpdaterTest::test_names_are_refused with data set "file on top level" | includes/updater.php | top level files tolerated | yes (fail) |  |
+| 178 | UpdaterTest::test_names_are_refused with data set "folder with suffix" | includes/updater.php | prefix compared without the slash | yes (fail) |  |
+| 179 | UpdaterTest::test_names_are_refused with data set "path up at the start" | includes/updater.php | prefix and dot segments not checked (two layers) | yes (fail) | UpdaterTest::test_names_are_refused with data set "second top folder"; UpdaterTest::test_names_are_refused with data set "file on top level"; UpdaterTest::test_names_are_refused with data set "folder with suffix"; UpdaterTest::test_names_are_refused with data set "path up in the middle"; UpdaterTest::test_names_are_refused with data set "path up at the end"; UpdaterTest::test_names_are_refused with data set "single dot"; UpdaterTest::test_names_are_refused with data set "drive letter"; UpdaterTest::test_names_are_refused with data set "upper case folder" |
+| 180 | UpdaterTest::test_names_are_refused with data set "path up in the middle" | includes/updater.php | parent segment not refused | yes (fail) | UpdaterTest::test_names_are_refused with data set "path up at the end" |
+| 181 | UpdaterTest::test_names_are_refused with data set "path up at the end" | includes/updater.php | last segment always dropped as the file name | yes (fail) |  |
+| 182 | UpdaterTest::test_names_are_refused with data set "single dot" | includes/updater.php | single dot segment not refused | yes (fail) |  |
+| 183 | UpdaterTest::test_names_are_refused with data set "double slash" | includes/updater.php | empty segment not refused | yes (fail) |  |
+| 184 | UpdaterTest::test_names_are_refused with data set "backslash" | includes/updater.php | backslashes normalised for the prefix check and allowed by the pattern (two layers) | yes (fail) |  |
+| 185 | UpdaterTest::test_names_are_refused with data set "absolute path" | includes/updater.php | leading slashes tolerated in the prefix check and when splitting (two layers) | yes (fail) |  |
+| 186 | UpdaterTest::test_names_are_refused with data set "drive letter" | includes/updater.php | prefix found anywhere in the name | yes (fail) |  |
+| 187 | UpdaterTest::test_names_are_refused with data set "null byte" | includes/updater.php | printable class replaced by not-backslash | yes (fail) |  |
+| 188 | UpdaterTest::test_names_are_refused with data set "empty name" | includes/updater.php | foreign entries skipped instead of refusing the archive | yes (fail) | UpdaterTest::test_names_are_refused with data set "second top folder"; UpdaterTest::test_names_are_refused with data set "file on top level"; UpdaterTest::test_names_are_refused with data set "folder with suffix"; UpdaterTest::test_names_are_refused with data set "path up at the start"; UpdaterTest::test_names_are_refused with data set "backslash"; UpdaterTest::test_names_are_refused with data set "absolute path"; UpdaterTest::test_names_are_refused with data set "drive letter"; UpdaterTest::test_names_are_refused with data set "not text"; UpdaterTest::test_names_are_refused with data set "upper case folder" |
+| 189 | UpdaterTest::test_names_are_refused with data set "not text" | includes/updater.php | non-text entries skipped | yes (fail) |  |
+| 190 | UpdaterTest::test_names_are_refused with data set "upper case folder" | includes/updater.php | case-insensitive prefix check | yes (fail) |  |
+| 191 | VerifySignatureTest::test_blob_matches_the_documented_vector | includes/verify.php | little endian length in the blob | yes (fail) | VerifySignatureTest::test_fixed_vector_from_the_protocol_verifies |
+| 192 | VerifySignatureTest::test_fixed_vector_from_the_protocol_verifies | includes/verify.php | wrong hash over the message, the test keys still agree with themselves | yes (fail) | VerifySignatureTest::test_blob_matches_the_documented_vector |
+| 193 | VerifySignatureTest::test_valid_signature_of_key_a_is_accepted | includes/verify.php | first key skipped | yes (fail) | UpdaterTest::test_judge_valid_with_key_a; UpdaterTest::test_judge_same_version; UpdaterTest::test_judge_lower_version; UpdaterTest::test_judge_compares_numbers_not_text; UpdaterTest::test_judge_php_too_old; UpdaterTest::test_judge_wordpress_too_old; VerifySignatureTest::test_fixed_vector_from_the_protocol_verifies |
+| 194 | VerifySignatureTest::test_valid_signature_of_key_b_is_accepted | includes/verify.php | only the first key checked | yes (fail) | UpdaterTest::test_judge_valid_with_key_b |
+| 195 | VerifySignatureTest::test_signature_of_a_foreign_key_is_rejected | includes/verify.php | result of the check thrown away | yes (fail) | UpdaterTest::test_judge_unknown_key; UpdaterTest::test_judge_flipped_bit_in_the_signature; UpdaterTest::test_judge_signature_for_the_namespace_git; VerifySignatureTest::test_fixed_vector_from_the_protocol_verifies; VerifySignatureTest::test_one_flipped_bit_in_the_manifest_is_rejected; VerifySignatureTest::test_one_flipped_bit_in_the_signature_is_rejected; VerifySignatureTest::test_signature_made_for_namespace_git_is_rejected |
+| 196 | VerifySignatureTest::test_one_flipped_bit_in_the_manifest_is_rejected | includes/verify.php | blob hashes the namespace instead of the message | yes (fail) | VerifySignatureTest::test_blob_matches_the_documented_vector; VerifySignatureTest::test_fixed_vector_from_the_protocol_verifies |
+| 197 | VerifySignatureTest::test_one_flipped_bit_in_the_signature_is_rejected | includes/verify.php | verdict initialised as valid | yes (fail) | UpdaterTest::test_judge_unknown_key; UpdaterTest::test_judge_flipped_bit_in_the_signature; UpdaterTest::test_judge_signature_for_the_namespace_git; VerifySignatureTest::test_fixed_vector_from_the_protocol_verifies; VerifySignatureTest::test_signature_of_a_foreign_key_is_rejected; VerifySignatureTest::test_one_flipped_bit_in_the_manifest_is_rejected; VerifySignatureTest::test_signature_made_for_namespace_git_is_rejected |
+| 198 | VerifySignatureTest::test_signature_of_63_bytes_is_rejected | includes/verify.php | length guard loosened and sodium exception no longer caught (two layers) | yes (fail) | UpdaterTest::test_judge_signature_of_63_and_65_bytes |
+| 199 | VerifySignatureTest::test_signature_of_65_bytes_is_rejected | includes/verify.php | length guard loosened and sodium exception no longer caught (two layers) | yes (fail) | UpdaterTest::test_judge_signature_of_63_and_65_bytes |
+| 200 | VerifySignatureTest::test_empty_key_list_is_rejected | includes/verify.php | fail open without keys | yes (fail) | UpdaterTest::test_judge_empty_key_list |
+| 201 | VerifySignatureTest::test_signature_made_for_namespace_git_is_rejected | includes/verify.php | namespace left out of the signed blob | yes (fail) | UpdaterTest::test_judge_signature_for_the_namespace_git; VerifySignatureTest::test_blob_matches_the_documented_vector; VerifySignatureTest::test_fixed_vector_from_the_protocol_verifies |
+| 202 | VerifySignatureTest::test_key_of_wrong_length_is_rejected | includes/verify.php | key length not checked and sodium exception no longer caught (two layers) | yes (fail) | VerifySignatureTest::test_a_malformed_key_next_to_a_valid_one_rejects_the_whole_list |
+| 203 | VerifySignatureTest::test_a_malformed_key_next_to_a_valid_one_rejects_the_whole_list | includes/verify.php | malformed keys skipped instead of refusing the list | yes (fail) |  |
+| 204 | UpdaterTest::test_redirect_is_refused with data set "ip literal v4" | includes/updater.php | last label without its letter rule, an IPv4 address passes | yes (fail) | UpdaterTest::test_redirect_is_refused with data set "numeric top level" |
+| 205 | UpdaterTest::test_redirect_is_refused with data set "host without a dot" | includes/updater.php | single label hosts allowed | yes (fail) |  |
+| 206 | UpdaterTest::test_redirect_is_refused with data set "numeric top level" | includes/updater.php | digits allowed in the top level label | yes (fail) |  |
+| 207 | UpdaterTest::test_redirect_is_refused with data set "punycode label" | includes/updater.php | punycode labels no longer refused | yes (fail) |  |
+| 208 | UpdaterTest::test_next_replayed_older_release_cannot_drop_the_waiting_update | includes/updater.php | a replayed older release is handled like a fresh one and drops the waiting update | yes (fail) | UpdaterTest::test_next_replayed_older_release_is_not_stored_below_the_mark; UpdaterTest::test_next_mark_from_the_option_counts_without_a_waiting_update |
+| 209 | UpdaterTest::test_next_replayed_older_release_is_not_stored_below_the_mark | includes/updater.php | the stored mark is ignored, only a waiting update protects | yes (fail) | UpdaterTest::test_next_mark_from_the_option_counts_without_a_waiting_update |
+| 210 | UpdaterTest::test_next_mark_from_the_option_counts_without_a_waiting_update | includes/updater.php | the stored mark is ignored, only a waiting update protects | yes (fail) | UpdaterTest::test_next_replayed_older_release_is_not_stored_below_the_mark |
+| 211 | UpdaterTest::test_next_release_at_the_mark_is_handled_as_before | includes/updater.php | the mark is rewritten on every check at the same version | yes (fail) | UpdaterTest::test_next_release_that_is_not_newer_deletes; UpdaterTest::test_next_release_that_does_not_fit_deletes |
+| 212 | UpdaterTest::test_next_higher_release_raises_the_mark | includes/updater.php | the mark never rises, replay protection stops at the installed version | yes (fail) | UpdaterTest::test_next_recalled_version_is_never_taken_again; UpdaterTest::test_next_first_release_is_stored_with_the_local_time; UpdaterTest::test_next_malformed_mark_counts_as_none |
+| 213 | UpdaterTest::test_next_malformed_mark_counts_as_none | includes/updater.php | a malformed mark blocks every release | yes (fail) | UpdaterTest::test_next_malformed_recall_floor_counts_as_none; UpdaterTest::test_next_first_release_is_stored_with_the_local_time |
+| 214 | UpdaterTest::test_highest_version_skips_malformed_entries | includes/updater.php | malformed versions compete for the mark | yes (fail) |  |
+| 215 | UpdaterTest::test_missing_extensions_are_named | includes/updater.php | extension named by its class, the host cannot find it | yes (fail) |  |
 
-Cases: 199, shown red: 199, mutations run: 199
+Cases: 213, shown red: 213, mutations run: 215
 
 
 ## tools
@@ -299,7 +319,7 @@ Cases: 1, shown red: 1, mutations run: 1
 | # | Case | File | Mutation reason | Red | Other cases red |
 |---|---|---|---|---|---|
 | 1 | plugin activates without any output or notice | includes/source.php | closing tag with a blank line after it, output on every load | yes (fail) | a fresh site is not connected and plans no report, only the update check; a request to any other host never leaves the test site; a request to the test host reaches the fake server |
-| 2 | a fresh site is not connected and plans no report, only the update check | site-dispatch.php | activation plans the report without a connection | yes (earlier run) |  |
+| 2 | a fresh site is not connected and plans no report, only the update check | site-dispatch.php | activation plans the report without a connection | yes (fail) |  |
 
 Cases: 4, shown red: 2, mutations run: 2
 Not shown red:
@@ -325,17 +345,17 @@ Cases: 6, shown red: 6, mutations run: 6
 
 | # | Case | File | Mutation reason | Red | Other cases red |
 |---|---|---|---|---|---|
-| 1 | deactivation removes the cron events and the open enrollment | site-dispatch.php | open enrollment kept on deactivation | yes (earlier run) |  |
-| 2 | deactivation keeps the connection | site-dispatch.php | deactivation drops the connection | yes (earlier run) |  |
-| 3 | activation of a connected site plans the daily report | site-dispatch.php | activation no longer plans the report | yes (earlier run) |  |
-| 4 | uninstall leaves no option, no transient and no cron event | uninstall.php | stored update left behind | yes (earlier run) |  |
-| 5 | uninstall file does nothing when called outside of an uninstall | uninstall.php | uninstall guard removed | yes (earlier run) |  |
+| 1 | deactivation removes the cron events and the open enrollment | site-dispatch.php | open enrollment kept on deactivation | yes (fail) | deactivation keeps the connection |
+| 2 | deactivation keeps the connection | site-dispatch.php | deactivation drops the connection | yes (fail) | activation of a connected site plans the daily report; uninstall leaves no option, no transient and no cron event |
+| 3 | activation of a connected site plans the daily report | site-dispatch.php | activation no longer plans the report | yes (fail) |  |
+| 4 | uninstall leaves no option, no transient and no cron event | uninstall.php | stored update left behind | yes (fail) |  |
+| 5 | uninstall file does nothing when called outside of an uninstall | uninstall.php | uninstall guard removed | yes (fail) |  |
 
 Coverage gap mutations (expected to survive):
 
 | Case | File | Mutation reason | Survived |
 |---|---|---|---|
-| deactivated plugin sends nothing | site-dispatch.php | daily hook not cleared (the case tests WordPress: a deactivated plugin is not loaded, so no mutation of its code is visible) | yes |
+| deactivated plugin sends nothing | site-dispatch.php | daily hook not cleared (the case tests WordPress: a deactivated plugin is not loaded, so no mutation of its code is visible) | no, red: deactivation removes the cron events and the open enrollment |
 
 Cases: 6, shown red: 5, mutations run: 6
 Not shown red:
@@ -346,9 +366,9 @@ Not shown red:
 
 | # | Case | File | Mutation reason | Red | Other cases red |
 |---|---|---|---|---|---|
-| 1 | key change: new keys arrive with a release signed by a known key, old keys stop counting | includes/verify.php | only the work key checked | yes (earlier run) |  |
-| 2 | build with an http release address fetches nothing | includes/updater.php | http allowed for the release base and for every fetched address (two layers) | yes (earlier run) |  |
-| 3 | keys and release address cannot be changed at run time | includes/updater.php | release address read from an option | yes (earlier run) |  |
+| 1 | key change: new keys arrive with a release signed by a known key, old keys stop counting | includes/verify.php | only the work key checked | yes (fail) |  |
+| 2 | build with an http release address fetches nothing | includes/updater.php | http allowed for the release base and for every fetched address (two layers) | yes (fail) |  |
+| 3 | keys and release address cannot be changed at run time | includes/updater.php | release address read from an option | yes (fail) |  |
 
 Cases: 3, shown red: 3, mutations run: 3
 
@@ -464,28 +484,32 @@ Not shown red:
 | 6 | signature of an unknown key stores nothing | includes/updater.php | a readable manifest is trusted without a signature | yes (fail) | one flipped bit in the manifest stores nothing; one flipped bit in the signature stores nothing; signature made for the namespace git stores nothing; invalid release keeps the waiting update; admin page shows no update whose signature does not hold |
 | 7 | one flipped bit in the manifest stores nothing | includes/updater.php | a signature of the right length is trusted | yes (fail) | signature of an unknown key stores nothing; one flipped bit in the signature stores nothing; signature made for the namespace git stores nothing; invalid release keeps the waiting update; admin page shows no update whose signature does not hold |
 | 8 | one flipped bit in the signature stores nothing | includes/updater.php | only an empty signature is fatal | yes (fail) | signature of an unknown key stores nothing; one flipped bit in the manifest stores nothing; signature made for the namespace git stores nothing; invalid release keeps the waiting update; admin page shows no update whose signature does not hold |
-| 9 | signature made for the namespace git stores nothing | includes/verify.php | wrong namespace constant, a Git signature verifies | yes (fail) | the cron hook runs the check; valid release is stored with manifest, signature, version and local time; release signed with the reserve key is stored; version is compared by numbers; manifest of 8192 bytes is taken, one byte more is not; five redirects are followed, the sixth is not; second check of the same release keeps the local time; new version starts the clock again; other bytes for the same version start the clock again; admin page shows the waiting update and when it installs |
+| 9 | signature made for the namespace git stores nothing | includes/verify.php | wrong namespace constant, a Git signature verifies | yes (fail) | the cron hook runs the check; valid release is stored with manifest, signature, version and local time; release signed with the reserve key is stored; version is compared by numbers; manifest of 8192 bytes is taken, one byte more is not; five redirects are followed, the sixth is not; second check of the same release keeps the local time; new version starts the clock again; other bytes for the same version are ignored, the waiting update and its clock stay; an older signed release served again is ignored, the waiting update stays; a deleted release is recalled for good, only a higher version is taken afterwards; admin page shows the waiting update and when it installs |
 | 10 | armored signature file instead of the raw bytes stores nothing | includes/updater.php | signature only checked for presence at the fetch and at the verdict (two layers) | yes (fail) | signature of an unknown key stores nothing; one flipped bit in the manifest stores nothing; one flipped bit in the signature stores nothing; signature of 63 and of 65 bytes stores nothing; signature made for the namespace git stores nothing; invalid release keeps the waiting update; admin page shows no update whose signature does not hold |
-| 11 | same and lower version store nothing | includes/updater.php, includes/verify.php | same version accepted by the verdict and by the acceptance check (two layers) | yes (fail) | release that was replaced by an older one drops the waiting update |
-| 12 | version is compared by numbers | includes/verify.php | patch level ignored | yes (fail) | the cron hook runs the check; valid release is stored with manifest, signature, version and local time; release signed with the reserve key is stored; manifest of 8192 bytes is taken, one byte more is not; five redirects are followed, the sixth is not; second check of the same release keeps the local time; new version starts the clock again; other bytes for the same version start the clock again; admin page shows the waiting update and when it installs |
+| 11 | same and lower version store nothing | includes/updater.php, includes/verify.php | same version accepted by the verdict and by the acceptance check (two layers) | yes (fail) | a release of the installed version stores nothing and leaves no mark |
+| 12 | version is compared by numbers | includes/verify.php | patch level ignored | yes (fail) | the cron hook runs the check; valid release is stored with manifest, signature, version and local time; release signed with the reserve key is stored; manifest of 8192 bytes is taken, one byte more is not; five redirects are followed, the sixth is not; second check of the same release keeps the local time; new version starts the clock again; other bytes for the same version are ignored, the waiting update and its clock stay; an older signed release served again is ignored, the waiting update stays; a deleted release is recalled for good, only a higher version is taken afterwards; admin page shows the waiting update and when it installs |
 | 13 | signed manifest with a foreign slug stores nothing | includes/verify.php | slug checked neither by the parser nor by the acceptance (two layers) | yes (fail) |  |
 | 14 | signed manifest with a path, an address or no version as file name stores nothing | includes/verify.php | base name of the zip compared | yes (fail) |  |
 | 15 | signed manifest with an extra field against the waiting period stores nothing | includes/verify.php | extra manifest fields ignored | yes (fail) |  |
 | 16 | signed manifest that needs a newer wordpress or php stores nothing | includes/verify.php | WordPress minimum not checked | yes (fail) |  |
 | 17 | manifest of 8192 bytes is taken, one byte more is not | includes/verify.php | manifest limit doubled | yes (fail) | every request is https, with tls check, without automatic redirects and size limited |
 | 18 | redirect to http is not followed | includes/updater.php | http redirects followed | yes (fail) |  |
-| 19 | redirect to a relative address, another port or an address with a user is not followed | includes/updater.php | protocol relative redirects completed with https (port and user variants are refused by the test reroute before the plugin can be seen following them; UpdaterTest covers those) | yes (fail) |  (rerun alone after the mutation was corrected) |
+| 19 | redirect to a relative address, another port or an address with a user is not followed | includes/updater.php | protocol relative redirects completed with https (port and user variants are refused by the test reroute before the plugin can be seen following them; UpdaterTest covers those) | yes (fail) |  |
 | 20 | five redirects are followed, the sixth is not | includes/updater.php | one redirect more | yes (fail) |  |
-| 21 | second check of the same release keeps the local time | includes/updater.php | every check restarts the clock | yes (fail) |  |
-| 22 | new version starts the clock again | includes/updater.php | old stamp kept on a new version | yes (fail) | other bytes for the same version start the clock again |
-| 23 | other bytes for the same version start the clock again | includes/updater.php | manifest bytes not compared, only the version | yes (fail) |  |
-| 24 | deleted release drops the waiting update | includes/updater.php | a deleted release keeps the waiting update | yes (fail) |  |
-| 25 | release that was replaced by an older one drops the waiting update | includes/updater.php | not newer no longer deletes | yes (fail) |  |
-| 26 | server that does not answer keeps the waiting update | includes/updater.php | a failed fetch cancels the waiting update | yes (fail) | server error keeps the waiting update; invalid release keeps the waiting update |
-| 27 | server error keeps the waiting update | includes/updater.php | any non-200 counts as gone | yes (fail) | server that does not answer keeps the waiting update |
-| 28 | invalid release keeps the waiting update | includes/updater.php | an invalid signature cancels the waiting update | yes (fail) |  |
-| 29 | admin page shows the waiting update and when it installs | includes/admin.php | first-seen time shown as install time | yes (fail) |  |
-| 30 | admin page shows no update whose signature does not hold | includes/updater.php | verdict not checked when reading the stored update | yes (fail) |  |
+| 21 | second check of the same release keeps the local time | includes/updater.php | every check restarts the clock | yes (fail) | other bytes for the same version are ignored, the waiting update and its clock stay |
+| 22 | new version starts the clock again | includes/updater.php | old stamp kept on a new version | yes (fail) |  |
+| 23 | other bytes for the same version are ignored, the waiting update and its clock stay | includes/updater.php | manifest bytes not compared, only the version | yes (fail) |  |
+| 24 | deleted release drops the waiting update | includes/updater.php | a deleted release keeps the waiting update | yes (fail) | a deleted release is recalled for good, only a higher version is taken afterwards |
+| 25 | server that does not answer keeps the waiting update | includes/updater.php | a failed fetch cancels the waiting update | yes (fail) | server error keeps the waiting update; invalid release keeps the waiting update |
+| 26 | server error keeps the waiting update | includes/updater.php | any non-200 counts as gone | yes (fail) | server that does not answer keeps the waiting update |
+| 27 | invalid release keeps the waiting update | includes/updater.php | an invalid signature cancels the waiting update | yes (fail) |  |
+| 28 | admin page shows the waiting update and when it installs | includes/admin.php | first-seen time shown as install time | yes (fail) |  |
+| 29 | admin page shows no update whose signature does not hold | includes/updater.php | verdict not checked when reading the stored update | yes (fail) |  |
+| 30 | an older signed release served again is ignored, the waiting update stays | includes/updater.php | replay protection removed, an old signed manifest drops or replaces the waiting update | yes (fail) |  |
+| 31 | a deleted release is recalled for good, only a higher version is taken afterwards | includes/updater.php | the recall floor is ignored, the deleted release comes back and installs (review C-M1) | yes (fail) |  |
+| 32 | a deleted release is recalled for good, only a higher version is taken afterwards | includes/updater.php | the recall is never written | yes (fail) |  |
+| 33 | a deleted release is recalled for good, only a higher version is taken afterwards | includes/updater.php | marks are written unconditionally, a later recall of a lower version lowers the floor (review C-L3) | yes (fail) |  |
+| 34 | a release of the installed version stores nothing and leaves no mark | includes/updater.php | the installed version does not count for the mark, a release at that version writes one | yes (fail) |  |
 
 Coverage gap mutations (expected to survive):
 
@@ -494,7 +518,7 @@ Coverage gap mutations (expected to survive):
 | manifest without a signature file stores nothing | includes/updater.php, includes/verify.php | fetch gate and length guard dropped; sodium itself still refuses an empty signature (three layers) | yes |
 | signature of 63 and of 65 bytes stores nothing | includes/updater.php, includes/verify.php | fetch gate and length guard loosened; sodium itself still refuses the length (three layers) | yes |
 
-Cases: 32, shown red: 30, mutations run: 32
+Cases: 34, shown red: 32, mutations run: 36
 Not shown red:
   manifest without a signature file stores nothing
   signature of 63 and of 65 bytes stores nothing
@@ -530,7 +554,7 @@ Not shown red:
 | 1 | automatic update with the switch on installs the new version | includes/updater.php | download timeout halved | yes (earlier run) |  |
 | 2 | automatic update after 72 hours installs the new version | includes/updater.php | waiting period doubled | yes (earlier run) |  |
 | 3 | automatic update before 72 hours installs nothing | includes/updater.php | waiting period enforced neither at the offer nor at the download (two layers) | yes (earlier run) |  |
-| 4 | update now in wp-admin installs through the same checks | includes/updater.php | dot entry not excluded, every real install is refused | yes (earlier run) |  |
+| 4 | update now in wp-admin installs through the same checks | includes/updater.php | a stray entry in the listing, every real install is refused | yes (earlier run) |  |
 | 5 | update now before 72 hours installs nothing | includes/updater.php | waiting period enforced neither at the offer nor at the download (two layers) | yes (earlier run) |  |
 | 6 | forged update list before 72 hours is refused at the install check | includes/updater.php | waiting period not checked again at the download | yes (earlier run) |  |
 | 7 | foreign package address for the own plugin is ignored, the own address is used | includes/updater.php | package address from the update list used | yes (earlier run) |  |
@@ -542,14 +566,22 @@ Not shown red:
 | 13 | validly signed zip is refused before unpacking: file on top level | includes/updater.php | top level files tolerated | yes (earlier run) |  |
 | 14 | validly signed zip is refused before unpacking: path up | includes/updater.php | prefix and dot segments not checked (two layers) | yes (earlier run) |  |
 | 15 | validly signed zip is refused before unpacking: path up inside the folder | includes/updater.php | parent segment not refused | yes (earlier run) |  |
-| 16 | validly signed zip is refused before unpacking: backslash path | includes/updater.php | backslashes normalised for the prefix check and allowed by the pattern (two layers) | yes (fail) |  |
-| 17 | validly signed zip is refused before unpacking: absolute path | includes/updater.php | leading slashes tolerated in the prefix check and when splitting (two layers) | **NO** |  |
-| 18 | validly signed zip is refused before unpacking: other folder name | includes/updater.php | prefix compared without the slash and the main file found by its base name (two layers) | yes (fail) |  |
-| 19 | validly signed zip is refused before unpacking: without the main file | includes/updater.php | main file presence not checked | yes (fail) |  |
-| 20 | validly signed file that is no zip is refused | includes/updater.php | unreadable archive handed to WordPress | yes (fail) |  |
-| 21 | package swapped after the hash check is refused right before unpacking: content | includes/updater.php | second hash taken from memory instead of the file | yes (fail) | package swapped after the hash check is refused right before unpacking: path |
-| 22 | package swapped after the hash check is refused right before unpacking: path | includes/updater.php | second hash taken from memory instead of the file | yes (fail) | package swapped after the hash check is refused right before unpacking: content |
-| 23 | the swap of the test really installs when the second hash is not there to stop it | site-dispatch.php | filter priority changed, the test can no longer remove it | yes (fail) |  |
+| 16 | validly signed zip is refused before unpacking: backslash path | includes/updater.php | backslashes normalised for the prefix check and allowed by the pattern (two layers) | yes (earlier run) |  |
+| 17 | validly signed zip is refused before unpacking: absolute path | includes/updater.php | absolute names skipped by the prefix check and the leading slash dropped when splitting (two layers) | yes (earlier run) |  |
+| 18 | validly signed zip is refused before unpacking: other folder name | includes/updater.php | prefix compared without the slash and the main file found by its base name (two layers) | yes (earlier run) |  |
+| 19 | validly signed zip is refused before unpacking: without the main file | includes/updater.php | main file presence not checked | yes (earlier run) |  |
+| 20 | validly signed file that is no zip is refused | includes/updater.php | unreadable archive handed to WordPress | yes (earlier run) |  |
+| 21 | package swapped after the hash check is refused right before unpacking: content | includes/updater.php | second hash taken from memory instead of the file | yes (earlier run) |  |
+| 22 | package swapped after the hash check is refused right before unpacking: path | includes/updater.php | second hash taken from memory instead of the file | yes (earlier run) |  |
+| 23 | the swap of the test really installs when the second hash is not there to stop it | site-dispatch.php | filter priority changed, the test can no longer remove it | yes (earlier run) |  |
+| 24 | redirect of the zip to http is not followed | includes/updater.php | http redirects followed | yes (earlier run) |  |
+| 25 | refused install leaves no temp file behind | includes/updater.php | temp file not deleted on refusal | yes (earlier run) |  |
+| 26 | update of another plugin passes all filters untouched | includes/updater.php | foreign downloads refused | yes (earlier run) |  |
+| 27 | the own package address for another target is refused | includes/updater.php | own package for another plugin handed back to WordPress | yes (earlier run) |  |
+| 28 | after the update cron and options are there and the daily report is still sent | includes/report.php | hard-coded reporter version | yes (fail) |  |
+| 29 | after the update the offer is gone and the next check clears the stored update | includes/updater.php | not newer no longer deletes | yes (fail) |  |
+| 30 | an install on which the second hash never ran is refused at the folder check | includes/updater.php | the folder check forgets the package instead of refusing, an unpacking without the second hash goes through | yes (fail) |  |
+| 31 | the folder check lists the unpacked package through WP_Filesystem, not through PHP | includes/updater.php | back to the PHP listing, which cannot see the remote folder of an FTP or SSH host | yes (fail) |  |
 
 Coverage gap mutations (expected to survive):
 
@@ -558,25 +590,12 @@ Coverage gap mutations (expected to survive):
 | release deleted between offer and install is refused | includes/updater.php | status and size checks dropped; the hash of an empty file still fails (three layers) | yes |
 | server that does not answer at install time is refused | includes/updater.php | status and size checks dropped; the hash of an empty file still fails (three layers) | yes |
 
-Cases: 31, shown red: 22, mutations run: 25
+Cases: 33, shown red: 31, mutations run: 33
 Not shown red:
-  validly signed zip is refused before unpacking: absolute path
   release deleted between offer and install is refused
   server that does not answer at install time is refused
-  redirect of the zip to http is not followed
-  refused install leaves no temp file behind
-  update of another plugin passes all filters untouched
-  the own package address for another target is refused
-  after the update cron and options are there and the daily report is still sent
-  after the update the offer is gone and the next check clears the stored update
 
 
-## Not run (time budget or --limit)
+## Not run
 
-chunk A3:
-- update-install.test.mjs / redirect of the zip to http is not followed
-- update-install.test.mjs / refused install leaves no temp file behind
-- update-install.test.mjs / update of another plugin passes all filters untouched
-- update-install.test.mjs / the own package address for another target is refused
-- update-install.test.mjs / after the update cron and options are there and the daily report is still sent
-- update-install.test.mjs / after the update the offer is gone and the next check clears the stored update
+None: every integration mutation ran.
