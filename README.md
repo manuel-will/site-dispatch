@@ -3,10 +3,22 @@
 WordPress plugin. Sends a signed, read-only status report (plugins, available updates, WordPress and
 server versions) to a server you connect it to. No inbound endpoints, no remote commands.
 
-**Status: in development, no release yet.**
+**Status: pilot. The first release runs on one site, more sites follow after a week of
+observation.**
 
 - [PROTOCOL.md](PROTOCOL.md): report, enrollment and update interfaces, with test vectors.
+- [SECURITY.md](SECURITY.md): how to report a vulnerability.
 - License: GPL-2.0-or-later.
+
+## Installation
+
+Install only the ZIP of a GitHub release (`site-dispatch-<version>.zip`), through "Plugins, Add
+New, Upload Plugin" or by unpacking it into `wp-content/plugins/`. It unpacks into the folder
+`site-dispatch/`, the folder the updater expects. A copy under another folder name (the "Source
+code" archive GitHub adds to every release, a clone of the repository, a renamed folder) is moved to
+`site-dispatch/` at its first update and deactivates itself in the process. Connect the plugin under
+"Tools, Site Dispatch" with the host name of your server; whoever runs the server approves the code
+the page shows.
 
 ## Development
 
@@ -27,6 +39,7 @@ npm run playground                     # the admin page in a local Playground, w
 node qa/red-runs.mjs --kinds=php,tools # red runs: one production mutation per test case, about 7 minutes
 node qa/red-runs.mjs --kinds=integration --specs=update-check.test.mjs   # Playground red runs, one file
 node qa/static-red-runs.mjs            # red runs for the static and admin.js tests, about a minute
+node qa/pilot-instance.mjs <command>   # a local Playground site running a real release against GitHub
 ```
 
 Red runs prove that every test can fail: `qa/red-runs-mutations.mjs` holds one realistic bug per
@@ -54,18 +67,30 @@ time for keys or address does not exist.
 
 A release is a commit, a ZIP built from it, a manifest and a signature over the manifest.
 
-1. Raise the version in `site-dispatch.php` (header and constant), commit.
+**Signing is the release decision.** Every manifest ever signed with one of the two built-in keys
+stays installable on every site that has not seen a higher version, for as long as it is the latest
+release on GitHub. There is no later veto except deleting the release within the waiting period or
+publishing a higher version. So sign only what should run on every site, and nothing for a test:
+tests use throwaway keys (`npm test`, `qa/pilot-instance.mjs` uses a real release on a local site
+instead).
+
+1. Raise the version in `site-dispatch.php` (header and constant), commit, push.
 2. `node tools/build-release.mjs` builds `dist/site-dispatch-<version>.zip` and
    `dist/manifest.json` and stops. It refuses with uncommitted changes, with an existing tag, and
    when `includes/keys.php` or `includes/source.php` are not the pinned production files
    (`tools/production-pins.json`). The same commit gives the same ZIP, byte for byte.
-3. Sign `dist/manifest.json` in your own terminal, with no coding agent running:
+3. Sign `dist/manifest.json` in your own terminal, with no coding agent running. The signing key
+   lives in an SSH agent (1Password), so the agent has to be up and `ssh-add -l` has to list the
+   key; `-f` names the public key file, the private key never leaves the agent:
    `ssh-keygen -Y sign -f <public key> -n site-dispatch-update manifest.json`
 4. `node tools/finish-release.mjs` takes the raw 64 byte signature out of the file OpenSSH wrote,
    checks it against the keys built into the plugin and puts the three release files into
    `dist/release`. It uploads nothing.
-5. `node tools/finish-release.mjs --publish` creates the GitHub release with the GitHub CLI. The
-   commit has to be pushed before.
+5. Tag the commit with a signed tag and push the tag: `git tag -s v<version> -m v<version>` and
+   `git push origin v<version>`. The GitHub CLI reuses an existing tag; without this step it would
+   create an unsigned one.
+6. `node tools/finish-release.mjs --publish` creates the GitHub release with the GitHub CLI, under
+   the login of whoever runs it.
 
 Versions only go up. `releases/latest` is GitHub's newest release by date, not by number, and every
 site remembers the highest version it has seen validly signed and ignores anything lower. So never
