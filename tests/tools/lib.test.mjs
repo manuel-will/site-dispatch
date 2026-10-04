@@ -144,13 +144,15 @@ test( 'release: a folder outside the release set stops the build', () => {
 	assert.doesNotThrow( () => checkReleaseSet( filesFromCommit( ROOT ) ) );
 	const repo = makeRepo();
 	try {
-		fs.mkdirSync( path.join( repo, 'qa' ) );
-		fs.writeFileSync( path.join( repo, 'qa', 'harness.mjs' ), '// not part of a release\n' );
+		// The throwaway repository carries the real .gitattributes, so the folder has to be one
+		// that file does not know yet, as qa/ was before 2026-10-04.
+		fs.mkdirSync( path.join( repo, 'scratch' ) );
+		fs.writeFileSync( path.join( repo, 'scratch', 'harness.mjs' ), '// not part of a release\n' );
 		commitAll( repo, 'a folder that .gitattributes does not export-ignore' );
-		assert.throws( () => checkReleaseSet( filesFromCommit( repo ) ), /not part of a release.*qa/ );
+		assert.throws( () => checkReleaseSet( filesFromCommit( repo ) ), /not part of a release.*scratch/ );
 		const run = runTool( 'build-release.mjs', repo );
 		assert.equal( run.code, 1 );
-		assert.match( run.err, /Refused: not part of a release.*qa/ );
+		assert.match( run.err, /Refused: not part of a release.*scratch/ );
 		assert.ok( ! fs.existsSync( path.join( repo, 'dist' ) ) );
 	} finally {
 		removeFolder( repo );
