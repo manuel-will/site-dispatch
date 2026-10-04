@@ -31,10 +31,10 @@ const ZIP_CHECK = "\tif ( SITE_DISPATCH_SLUG . '-' . $version . '.zip' !== $zip 
 const VERSION_PATTERN = "const SITE_DISPATCH_VERSION_PATTERN    = '/^[0-9]+\\.[0-9]+\\.[0-9]+\\z/';";
 const VP = ( p ) => "const SITE_DISPATCH_VERSION_PATTERN    = '" + p + "';";
 const SHA_CHECK = "\tif ( 1 !== preg_match( '/^[0-9a-f]{128}\\z/', $sha512 ) ) {";
-const URL_PATTERN = "const SITE_DISPATCH_URL_PATTERN    = '/^https:\\/\\/[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?(?::443)?\\/[\\x21-\\x5b\\x5d-\\x7e]*\\z/';";
-const UP = ( p ) => "const SITE_DISPATCH_URL_PATTERN    = '" + p + "';";
-const BASE_PATTERN = "const SITE_DISPATCH_BASE_PATTERN   = '/^https:\\/\\/[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?(?:\\/[A-Za-z0-9._-]+)+\\z/';";
-const BP = ( p ) => "const SITE_DISPATCH_BASE_PATTERN   = '" + p + "';";
+const URL_PATTERN = "const SITE_DISPATCH_URL_PATTERN  = '/^https:\\/\\/(?:(?!xn--)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}(?::443)?\\/[\\x21-\\x5b\\x5d-\\x7e]*\\z/';";
+const UP = ( p ) => "const SITE_DISPATCH_URL_PATTERN  = '" + p + "';";
+const BASE_PATTERN = "const SITE_DISPATCH_BASE_PATTERN = '/^https:\\/\\/(?:(?!xn--)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}(?:\\/[A-Za-z0-9._-]+)+\\z/';";
+const BP = ( p ) => "const SITE_DISPATCH_BASE_PATTERN = '" + p + "';";
 const REDIRECT_RETURN = '\treturn 1 === preg_match( SITE_DISPATCH_URL_PATTERN, $location ) ? $location : null;';
 const JUDGE_VERIFY = "\tif ( ! site_dispatch_verify_signature( $manifest_bytes, $sig_raw, $keys ) ) {\n\t\treturn 'invalid';\n\t}";
 const JUDGE_NEWER = "\tif ( site_dispatch_compare_versions( $offered, $current ) <= 0 ) {\n\t\treturn 'not_newer';\n\t}";
@@ -45,7 +45,7 @@ const KEY_GUARD = "\t\tif ( ! is_string( $key ) || 32 !== strlen( $key ) ) {\n\t
 const NAMES_PREFIX = '\t\tif ( ! is_string( $name ) || 0 !== strpos( $name, $prefix ) ) {\n\t\t\treturn false;\n\t\t}';
 const NAMES_PARTS = "\t\t\tif ( '' === $part || '.' === $part || '..' === $part ) {";
 const NAMES_PATTERN = "\t\tif ( 1 !== preg_match( '/^[\\x20-\\x5b\\x5d-\\x7e]{1,512}\\z/', $name ) ) {";
-const NEXT_SAME = "\tif ( null !== $stored && ( $stored['manifest'] ?? null ) === $manifest_bytes && ( $stored['version'] ?? null ) === $manifest['version'] ) {\n\t\treturn array( 'action' => 'keep' );\n\t}\n";
+const NEXT_SAME = "\tif ( null !== $stored && ( $stored['manifest'] ?? null ) === $manifest_bytes && ( $stored['version'] ?? null ) === $manifest['version'] ) {\n\t\treturn array( 'action' => 'keep' ) + $raised;\n\t}\n";
 const DUE_RETURN = '\treturn $first_seen <= $now && $now - $first_seen >= SITE_DISPATCH_UPDATE_DELAY;';
 const PICK_COND = "( is_string( $value ) || is_int( $value ) || is_float( $value ) ) && '' !== (string) $value";
 const SERVER_PATTERN = "const SITE_DISPATCH_SERVER_PATTERN = '/^[A-Za-z][A-Za-z0-9_-]{0,31}(\\/[0-9][0-9.]{0,15})?\\z/';";
@@ -185,34 +185,34 @@ export const PHP = [
 	php( U( 'test_keys_entry_that_is_not_text_empties_the_list' ), UPD, '\t\tif ( ! is_string( $entry ) ) {\n\t\t\treturn array();\n\t\t}', '\t\tif ( ! is_string( $entry ) ) {\n\t\t\tcontinue;\n\t\t}', 'non-text entries skipped' ),
 
 	// ----- UpdaterTest: redirect targets -----
-	php( U( 'test_redirect_https_address_is_taken' ), UPD, URL_PATTERN, UP( '/^https:\\/\\/[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?(?::443)?\\/[A-Za-z0-9._\\/-]*\\z/' ), 'query characters refused' ),
-	php( U( 'test_redirect_port_443_is_taken' ), UPD, URL_PATTERN, UP( '/^https:\\/\\/[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?\\/[\\x21-\\x5b\\x5d-\\x7e]*\\z/' ), 'explicit port 443 refused' ),
-	php( UD( 'test_redirect_is_refused', 'http' ), UPD, URL_PATTERN, UP( '/^https?:\\/\\/[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?(?::443)?\\/[\\x21-\\x5b\\x5d-\\x7e]*\\z/' ), 'http allowed' ),
+	php( U( 'test_redirect_https_address_is_taken' ), UPD, URL_PATTERN, UP( '/^https:\\/\\/(?:(?!xn--)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}(?::443)?\\/[A-Za-z0-9._\\/-]*\\z/' ), 'query characters refused' ),
+	php( U( 'test_redirect_port_443_is_taken' ), UPD, URL_PATTERN, UP( '/^https:\\/\\/(?:(?!xn--)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}\\/[\\x21-\\x5b\\x5d-\\x7e]*\\z/' ), 'explicit port 443 refused' ),
+	php( UD( 'test_redirect_is_refused', 'http' ), UPD, URL_PATTERN, UP( '/^https?:\\/\\/(?:(?!xn--)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}(?::443)?\\/[\\x21-\\x5b\\x5d-\\x7e]*\\z/' ), 'http allowed' ),
 	php( UD( 'test_redirect_is_refused', 'relative' ), UPD, REDIRECT_RETURN, "\tif ( 0 === strpos( $location, '/' ) && 0 !== strpos( $location, '//' ) ) {\n\t\t$location = 'https://github.com' . $location;\n\t}\n" + REDIRECT_RETURN, 'relative redirects resolved against GitHub' ),
 	php( UD( 'test_redirect_is_refused', 'protocol relative' ), UPD, REDIRECT_RETURN, "\tif ( 0 === strpos( $location, '//' ) ) {\n\t\t$location = 'https:' . $location;\n\t}\n" + REDIRECT_RETURN, 'protocol relative redirects resolved' ),
-	php( UD( 'test_redirect_is_refused', 'user in the address' ), UPD, URL_PATTERN, UP( '/^https:\\/\\/(?:[a-z0-9]+@)?[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?(?::443)?\\/[\\x21-\\x5b\\x5d-\\x7e]*\\z/' ), 'user part allowed' ),
-	php( UD( 'test_redirect_is_refused', 'port 8443' ), UPD, URL_PATTERN, UP( '/^https:\\/\\/[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?(?::[0-9]{1,5})?\\/[\\x21-\\x5b\\x5d-\\x7e]*\\z/' ), 'any port allowed' ),
-	php( UD( 'test_redirect_is_refused', 'upper case host' ), UPD, URL_PATTERN, UP( '/^https:\\/\\/[A-Za-z0-9](?:[A-Za-z0-9.-]{0,251}[A-Za-z0-9])?(?::443)?\\/[\\x21-\\x5b\\x5d-\\x7e]*\\z/' ), 'upper case host allowed' ),
-	php( UD( 'test_redirect_is_refused', 'ip literal v6' ), UPD, URL_PATTERN, UP( '/^https:\\/\\/(?:\\[[0-9a-f:]+\\]|[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?)(?::443)?\\/[\\x21-\\x5b\\x5d-\\x7e]*\\z/' ), 'IPv6 literal allowed' ),
-	php( UD( 'test_redirect_is_refused', 'no path' ), UPD, URL_PATTERN, UP( '/^https:\\/\\/[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?(?::443)?(?:\\/[\\x21-\\x5b\\x5d-\\x7e]*)?\\z/' ), 'path optional' ),
-	php( UD( 'test_redirect_is_refused', 'space' ), UPD, URL_PATTERN, UP( '/^https:\\/\\/[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?(?::443)?\\/[\\x20-\\x5b\\x5d-\\x7e]*\\z/' ), 'space allowed in the path' ),
-	php( UD( 'test_redirect_is_refused', 'line break at end' ), UPD, URL_PATTERN, UP( '/^https:\\/\\/[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?(?::443)?\\/[\\x21-\\x5b\\x5d-\\x7e]*$/' ), '$ instead of \\z' ),
-	php( UD( 'test_redirect_is_refused', 'line break inside' ), UPD, URL_PATTERN, UP( '/^https:\\/\\/[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?(?::443)?\\/[^\\\\\\\\]*\\z/' ), 'printable class replaced by not-backslash' ),
+	php( UD( 'test_redirect_is_refused', 'user in the address' ), UPD, URL_PATTERN, UP( '/^https:\\/\\/(?:[a-z0-9]+@)?(?:(?!xn--)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}(?::443)?\\/[\\x21-\\x5b\\x5d-\\x7e]*\\z/' ), 'user part allowed' ),
+	php( UD( 'test_redirect_is_refused', 'port 8443' ), UPD, URL_PATTERN, UP( '/^https:\\/\\/(?:(?!xn--)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}(?::[0-9]{1,5})?\\/[\\x21-\\x5b\\x5d-\\x7e]*\\z/' ), 'any port allowed' ),
+	php( UD( 'test_redirect_is_refused', 'upper case host' ), UPD, URL_PATTERN, UP( '/^https:\\/\\/(?:(?!xn--)[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\\.)+[A-Za-z]{2,63}(?::443)?\\/[\\x21-\\x5b\\x5d-\\x7e]*\\z/' ), 'upper case host allowed' ),
+	php( UD( 'test_redirect_is_refused', 'ip literal v6' ), UPD, URL_PATTERN, UP( '/^https:\\/\\/(?:\\[[0-9a-f:]+\\]|(?:(?!xn--)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63})(?::443)?\\/[\\x21-\\x5b\\x5d-\\x7e]*\\z/' ), 'IPv6 literal allowed' ),
+	php( UD( 'test_redirect_is_refused', 'no path' ), UPD, URL_PATTERN, UP( '/^https:\\/\\/(?:(?!xn--)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}(?::443)?(?:\\/[\\x21-\\x5b\\x5d-\\x7e]*)?\\z/' ), 'path optional' ),
+	php( UD( 'test_redirect_is_refused', 'space' ), UPD, URL_PATTERN, UP( '/^https:\\/\\/(?:(?!xn--)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}(?::443)?\\/[\\x20-\\x5b\\x5d-\\x7e]*\\z/' ), 'space allowed in the path' ),
+	php( UD( 'test_redirect_is_refused', 'line break at end' ), UPD, URL_PATTERN, UP( '/^https:\\/\\/(?:(?!xn--)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}(?::443)?\\/[\\x21-\\x5b\\x5d-\\x7e]*$/' ), '$ instead of \\z' ),
+	php( UD( 'test_redirect_is_refused', 'line break inside' ), UPD, URL_PATTERN, UP( '/^https:\\/\\/(?:(?!xn--)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}(?::443)?\\/[^\\\\\\\\]*\\z/' ), 'printable class replaced by not-backslash' ),
 	php( UD( 'test_redirect_is_refused', 'too long' ), UPD, '\tif ( strlen( $location ) > SITE_DISPATCH_URL_MAX_LENGTH ) {\n\t\treturn null;\n\t}\n', '', 'length limit dropped' ),
 	php( UD( 'test_redirect_is_refused', 'empty' ), UPD, REDIRECT_RETURN, '\treturn false !== preg_match( SITE_DISPATCH_URL_PATTERN, $location ) ? $location : null;', 'error check instead of match check on preg_match' ),
-	php( UD( 'test_redirect_is_refused', 'other scheme' ), UPD, URL_PATTERN, UP( '/^[a-z]+:\\/\\/[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?(?::443)?\\/[\\x21-\\x5b\\x5d-\\x7e]*\\z/' ), 'any scheme allowed' ),
-	php( UD( 'test_redirect_is_refused', 'upper case scheme' ), UPD, URL_PATTERN, UP( '/^https:\\/\\/[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?(?::443)?\\/[\\x21-\\x5b\\x5d-\\x7e]*\\z/i' ), 'case-insensitive address pattern' ),
+	php( UD( 'test_redirect_is_refused', 'other scheme' ), UPD, URL_PATTERN, UP( '/^[a-z]+:\\/\\/(?:(?!xn--)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}(?::443)?\\/[\\x21-\\x5b\\x5d-\\x7e]*\\z/' ), 'any scheme allowed' ),
+	php( UD( 'test_redirect_is_refused', 'upper case scheme' ), UPD, URL_PATTERN, UP( '/^https:\\/\\/(?:(?!xn--)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}(?::443)?\\/[\\x21-\\x5b\\x5d-\\x7e]*\\z/i' ), 'case-insensitive address pattern' ),
 	php( UD( 'test_redirect_is_refused', 'backslash after host' ), UPD, REDIRECT_RETURN, "\t$location = str_replace( '\\\\', '/', $location );\n" + REDIRECT_RETURN, 'backslashes normalised to slashes' ),
 	php( U( 'test_redirect_address_of_4096_characters_is_taken' ), UPD, '\tif ( strlen( $location ) > SITE_DISPATCH_URL_MAX_LENGTH ) {', '\tif ( strlen( $location ) >= SITE_DISPATCH_URL_MAX_LENGTH ) {', 'off-by-one on the length limit' ),
 
 	// ----- UpdaterTest: release addresses -----
 	php( U( 'test_url_of_manifest_and_signature' ), UPD, "\treturn $base . '/releases/latest/download/' . $file;", "\treturn $base . '/releases/latest/downloads/' . $file;", 'path typo' ),
 	php( U( 'test_url_of_another_file_is_refused' ), UPD, "\tif ( 'manifest.json' !== $file && 'manifest.json.sig' !== $file ) {\n\t\treturn null;\n\t}\n", '', 'file name not restricted' ),
-	php( UD( 'test_url_with_a_bad_base_is_refused', 'http' ), UPD, BASE_PATTERN, BP( '/^https?:\\/\\/[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?(?:\\/[A-Za-z0-9._-]+)+\\z/' ), 'http base allowed' ),
-	php( UD( 'test_url_with_a_bad_base_is_refused', 'trailing slash' ), UPD, BASE_PATTERN, BP( '/^https:\\/\\/[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?(?:\\/[A-Za-z0-9._-]+)+\\/?\\z/' ), 'trailing slash allowed' ),
-	php( UD( 'test_url_with_a_bad_base_is_refused', 'query' ), UPD, BASE_PATTERN, BP( '/^https:\\/\\/[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?(?:\\/[A-Za-z0-9._-]+)+(?:\\?[^\\s]*)?\\z/' ), 'query allowed' ),
-	php( UD( 'test_url_with_a_bad_base_is_refused', 'no path' ), UPD, BASE_PATTERN, BP( '/^https:\\/\\/[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?(?:\\/[A-Za-z0-9._-]+)*\\z/' ), 'path optional' ),
-	php( UD( 'test_url_with_a_bad_base_is_refused', 'line break' ), UPD, BASE_PATTERN, BP( '/^https:\\/\\/[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?(?:\\/[A-Za-z0-9._-]+)+$/' ), '$ instead of \\z' ),
+	php( UD( 'test_url_with_a_bad_base_is_refused', 'http' ), UPD, BASE_PATTERN, BP( '/^https?:\\/\\/(?:(?!xn--)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}(?:\\/[A-Za-z0-9._-]+)+\\z/' ), 'http base allowed' ),
+	php( UD( 'test_url_with_a_bad_base_is_refused', 'trailing slash' ), UPD, BASE_PATTERN, BP( '/^https:\\/\\/(?:(?!xn--)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}(?:\\/[A-Za-z0-9._-]+)+\\/?\\z/' ), 'trailing slash allowed' ),
+	php( UD( 'test_url_with_a_bad_base_is_refused', 'query' ), UPD, BASE_PATTERN, BP( '/^https:\\/\\/(?:(?!xn--)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}(?:\\/[A-Za-z0-9._-]+)+(?:\\?[^\\s]*)?\\z/' ), 'query allowed' ),
+	php( UD( 'test_url_with_a_bad_base_is_refused', 'no path' ), UPD, BASE_PATTERN, BP( '/^https:\\/\\/(?:(?!xn--)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}(?:\\/[A-Za-z0-9._-]+)*\\z/' ), 'path optional' ),
+	php( UD( 'test_url_with_a_bad_base_is_refused', 'line break' ), UPD, BASE_PATTERN, BP( '/^https:\\/\\/(?:(?!xn--)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}(?:\\/[A-Za-z0-9._-]+)+$/' ), '$ instead of \\z' ),
 	php( UD( 'test_url_with_a_bad_base_is_refused', 'empty' ), UPD, "\tif ( 1 !== preg_match( SITE_DISPATCH_BASE_PATTERN, $base ) ) {\n\t\treturn null;\n\t}\n\tif ( 'manifest.json' !== $file", "\tif ( false === preg_match( SITE_DISPATCH_BASE_PATTERN, $base ) ) {\n\t\treturn null;\n\t}\n\tif ( 'manifest.json' !== $file", 'error check instead of match check on preg_match' ),
 	php( U( 'test_url_of_the_zip_comes_from_version_and_name' ), UPD, "\treturn $base . '/releases/download/v' . $version . '/' . $zip;", "\treturn $base . '/releases/download/' . $version . '/' . $zip;", 'tag prefix v forgotten' ),
 	php( U( 'test_url_of_a_foreign_zip_name_is_refused' ), UPD, "\tif ( SITE_DISPATCH_SLUG . '-' . $version . '.zip' !== $zip ) {\n\t\treturn null;\n\t}\n\treturn $base . '/releases/download/v'", "\treturn $base . '/releases/download/v'", 'zip name not tied to the version' ),
@@ -258,7 +258,7 @@ export const PHP = [
 	php( U( 'test_next_failed_fetch_keeps_the_stored_update' ), UPD, "\tif ( 'ok' !== $fetch ) {\n\t\treturn array( 'action' => 'keep' );\n\t}", "\tif ( 'ok' !== $fetch ) {\n\t\treturn array( 'action' => 'delete' );\n\t}", 'a failed fetch deletes the waiting update' ),
 	php( U( 'test_next_unknown_fetch_result_keeps_the_stored_update' ), UPD, "\tif ( 'ok' !== $fetch ) {\n\t\treturn array( 'action' => 'keep' );\n\t}", "\tif ( 'failed' === $fetch ) {\n\t\treturn array( 'action' => 'keep' );\n\t}", 'only the known failure keeps, anything else goes on' ),
 	php( U( 'test_next_missing_release_deletes' ), UPD, "\tif ( 'gone' === $fetch ) {\n\t\treturn array( 'action' => 'delete' );\n\t}", "\tif ( 'gone' === $fetch ) {\n\t\treturn array( 'action' => 'keep' );\n\t}", 'a deleted release keeps the waiting update' ),
-	php( U( 'test_next_invalid_release_keeps_the_stored_update' ), UPD, "\tif ( 'ok' !== $verdict ) {\n\t\treturn array( 'action' => 'keep' );\n\t}", "\tif ( 'ok' !== $verdict ) {\n\t\treturn array( 'action' => 'delete' );\n\t}", 'an invalid signature cancels the waiting update' ),
+	php( U( 'test_next_invalid_release_keeps_the_stored_update' ), UPD, "\tif ( 'not_newer' !== $verdict && 'unfit' !== $verdict && 'ok' !== $verdict ) {\n\t\treturn array( 'action' => 'keep' );\n\t}", "\tif ( 'not_newer' !== $verdict && 'unfit' !== $verdict && 'ok' !== $verdict ) {\n\t\treturn array( 'action' => 'delete' );\n\t}", 'an invalid signature cancels the waiting update' ),
 	php( U( 'test_next_release_that_is_not_newer_deletes' ), UPD, "\tif ( 'not_newer' === $verdict || 'unfit' === $verdict ) {", "\tif ( 'unfit' === $verdict ) {", 'not newer no longer deletes' ),
 	php( U( 'test_next_release_that_does_not_fit_deletes' ), UPD, "\tif ( 'not_newer' === $verdict || 'unfit' === $verdict ) {", "\tif ( 'not_newer' === $verdict ) {", 'unfit no longer deletes' ),
 	php( U( 'test_next_same_release_keeps_first_seen' ), UPD, NEXT_SAME, '', 'every check stores again and restarts the clock' ),
@@ -268,7 +268,7 @@ export const PHP = [
 	php( U( 'test_next_manifest_that_does_not_parse_keeps' ), UPD, "\t$manifest = site_dispatch_parse_manifest( $manifest_bytes );\n\tif ( null === $manifest ) {\n\t\treturn array( 'action' => 'keep' );\n\t}", "\t$manifest = site_dispatch_parse_manifest( $manifest_bytes );\n\tif ( null === $manifest ) {\n\t\treturn array( 'action' => 'delete' );\n\t}", 'an unreadable manifest deletes' ),
 
 	// ----- UpdaterTest: waiting period -----
-	php( U( 'test_due_not_before_72_hours' ), UPD, 'const SITE_DISPATCH_UPDATE_DELAY   = 259200;', 'const SITE_DISPATCH_UPDATE_DELAY   = 25920;', 'digit lost in the delay' ),
+	php( U( 'test_due_not_before_72_hours' ), UPD, 'const SITE_DISPATCH_UPDATE_DELAY      = 259200;', 'const SITE_DISPATCH_UPDATE_DELAY      = 25920;', 'digit lost in the delay' ),
 	php( U( 'test_due_at_72_hours' ), UPD, DUE_RETURN, '\treturn $first_seen <= $now && $now - $first_seen > SITE_DISPATCH_UPDATE_DELAY;', 'off-by-one at exactly 72 hours' ),
 	php( U( 'test_due_at_once_with_the_switch' ), UPD, '\tif ( $early ) {\n\t\treturn true;\n\t}\n', '', 'switch for immediate updates ignored' ),
 	php( U( 'test_due_first_seen_in_the_future_waits' ), UPD, DUE_RETURN, '\treturn $first_seen > $now || $now - $first_seen >= SITE_DISPATCH_UPDATE_DELAY;', 'a stamp in the future counts as due' ),
@@ -325,6 +325,20 @@ export const PHP = [
 		{ file: VERIFY, search: VERIFY_LOOP, replace: VERIFY_LOOP_NO_TRY },
 	] ),
 	php( VS( 'test_a_malformed_key_next_to_a_valid_one_rejects_the_whole_list' ), VERIFY, KEY_GUARD, '\t\tif ( ! is_string( $key ) || 32 !== strlen( $key ) ) {\n\t\t\tcontinue;\n\t\t}\n', 'malformed keys skipped instead of refusing the list' ),
+
+	// ----- Phase 6 fixes (review A): high-water mark, release host pattern, missing extensions -----
+	php( UD( 'test_redirect_is_refused', 'ip literal v4' ), UPD, URL_PATTERN, UP( '/^https:\\/\\/(?:(?!xn--)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z0-9]{1,63}(?::443)?\\/[\\x21-\\x5b\\x5d-\\x7e]*\\z/' ), 'last label without its letter rule, an IPv4 address passes' ),
+	php( UD( 'test_redirect_is_refused', 'host without a dot' ), UPD, URL_PATTERN, UP( '/^https:\\/\\/(?:(?!xn--)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)*[a-z]{2,63}(?::443)?\\/[\\x21-\\x5b\\x5d-\\x7e]*\\z/' ), 'single label hosts allowed' ),
+	php( UD( 'test_redirect_is_refused', 'numeric top level' ), UPD, URL_PATTERN, UP( '/^https:\\/\\/(?:(?!xn--)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z0-9]{2,63}(?::443)?\\/[\\x21-\\x5b\\x5d-\\x7e]*\\z/' ), 'digits allowed in the top level label' ),
+	php( UD( 'test_redirect_is_refused', 'punycode label' ), UPD, URL_PATTERN, UP( '/^https:\\/\\/(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}(?::443)?\\/[\\x21-\\x5b\\x5d-\\x7e]*\\z/' ), 'punycode labels no longer refused' ),
+	php( U( 'test_next_replayed_older_release_cannot_drop_the_waiting_update' ), UPD, '\tif ( $order < 0 ) {\n\t\treturn array( \'action\' => \'keep\' );\n\t}', '\tif ( $order < -1 ) {\n\t\treturn array( \'action\' => \'keep\' );\n\t}', 'a replayed older release is handled like a fresh one and drops the waiting update' ),
+	php( U( 'test_next_replayed_older_release_is_not_stored_below_the_mark' ), UPD, '\t$mark    = site_dispatch_highest_version( array( $high_water, $waiting ) );', '\t$mark    = site_dispatch_highest_version( array( $waiting ) );', 'the stored mark is ignored, only a waiting update protects' ),
+	php( U( 'test_next_mark_from_the_option_counts_without_a_waiting_update' ), UPD, '\t$mark    = site_dispatch_highest_version( array( $high_water, $waiting ) );', '\t$mark    = site_dispatch_highest_version( array( $waiting ) );', 'the stored mark is ignored, only a waiting update protects' ),
+	php( U( 'test_next_release_at_the_mark_is_handled_as_before' ), UPD, "\t$raised = $order > 0 ? array( 'high_water' => $manifest['version'] ) : array();", "\t$raised = $order >= 0 ? array( 'high_water' => $manifest['version'] ) : array();", 'the mark is rewritten on every check at the same version' ),
+	php( U( 'test_next_higher_release_raises_the_mark' ), UPD, "\t$raised = $order > 0 ? array( 'high_water' => $manifest['version'] ) : array();", '\t$raised = array();', 'the mark never rises, replay protection stops at the installed version' ),
+	php( U( 'test_next_malformed_mark_counts_as_none' ), UPD, '\tif ( null === $b ) {\n\t\treturn 1;\n\t}\n\treturn site_dispatch_compare_versions( $a, $b );', '\tif ( null === $b ) {\n\t\treturn -1;\n\t}\n\treturn site_dispatch_compare_versions( $a, $b );', 'a malformed mark blocks every release' ),
+	php( U( 'test_highest_version_skips_malformed_entries' ), UPD, "\t\tif ( 1 !== preg_match( SITE_DISPATCH_VERSION_PATTERN, $version ) ) {\n\t\t\tcontinue;\n\t\t}\n\t\tif ( '' === $best", "\t\tif ( '' === $version ) {\n\t\t\tcontinue;\n\t\t}\n\t\tif ( '' === $best", 'malformed versions compete for the mark' ),
+	php( U( 'test_missing_extensions_are_named' ), UPD, "\t\t$missing[] = 'zip';", "\t\t$missing[] = 'ZipArchive';", 'extension named by its class, the host cannot find it' ),
 ];
 
 // ---------- tools/*.mjs, run by tests/tools ----------
@@ -498,11 +512,11 @@ export const INTEGRATION = [
 
 	// ----- uninstall / lifecycle -----
 	it( SMOKE, 'plugin activates without any output or notice', SOURCE, "const SITE_DISPATCH_RELEASE_BASE = 'https://github.com/manuel-will/site-dispatch';\n", "const SITE_DISPATCH_RELEASE_BASE = 'https://github.com/manuel-will/site-dispatch';\n?>\n\n", 'closing tag with a blank line after it, output on every load', 'wp-admin' ),
-	it( SMOKE, 'a fresh site is not connected and plans no report, only the update check', MAIN, 'function site_dispatch_activate(): void {\n\tsite_dispatch_schedule();', "function site_dispatch_activate(): void {\n\twp_schedule_event( time() + 5 * MINUTE_IN_SECONDS, 'daily', 'site_dispatch_daily' );", 'activation plans the report without a connection', 'Bericht' ),
+	it( SMOKE, 'a fresh site is not connected and plans no report, only the update check', MAIN, '\tsite_dispatch_schedule();\n\tsite_dispatch_schedule_update_check();', "\twp_schedule_event( time() + 5 * MINUTE_IN_SECONDS, 'daily', 'site_dispatch_daily' );\n\tsite_dispatch_schedule_update_check();", 'activation plans the report without a connection', 'Bericht' ),
 	it( UNI, 'deactivation removes the cron events and the open enrollment', MAIN, "\twp_clear_scheduled_hook( SITE_DISPATCH_UPDATE_HOOK );\n\tdelete_transient( SITE_DISPATCH_ENROLL_TRANSIENT );", '\twp_clear_scheduled_hook( SITE_DISPATCH_UPDATE_HOOK );', 'open enrollment kept on deactivation', 'wp-admin: Deinstallation' ),
 	it( UNI, 'deactivation keeps the connection', MAIN, "\twp_clear_scheduled_hook( SITE_DISPATCH_UPDATE_HOOK );\n\tdelete_transient( SITE_DISPATCH_ENROLL_TRANSIENT );", "\twp_clear_scheduled_hook( SITE_DISPATCH_UPDATE_HOOK );\n\tdelete_transient( SITE_DISPATCH_ENROLL_TRANSIENT );\n\tdelete_option( 'site_dispatch_state' );", 'deactivation drops the connection', 'wp-admin' ),
 	it( UNI, 'deactivated plugin sends nothing', MAIN, "\twp_clear_scheduled_hook( 'site_dispatch_daily' );\n\twp_clear_scheduled_hook( 'site_dispatch_retry' );\n\twp_clear_scheduled_hook( SITE_DISPATCH_UPDATE_HOOK );", "\twp_clear_scheduled_hook( 'site_dispatch_retry' );\n\twp_clear_scheduled_hook( SITE_DISPATCH_UPDATE_HOOK );", 'daily hook not cleared (the case tests WordPress: a deactivated plugin is not loaded, so no mutation of its code is visible)', 'wp-admin', 'survive' ),
-	it( UNI, 'activation of a connected site plans the daily report', MAIN, 'function site_dispatch_activate(): void {\n\tsite_dispatch_schedule();\n', 'function site_dispatch_activate(): void {\n', 'activation no longer plans the report', 'wp-admin' ),
+	it( UNI, 'activation of a connected site plans the daily report', MAIN, '\tsite_dispatch_schedule();\n\tsite_dispatch_schedule_update_check();\n', '\tsite_dispatch_schedule_update_check();\n', 'activation no longer plans the report', 'wp-admin' ),
 	it( UNI, 'uninstall leaves no option, no transient and no cron event', UNINSTALL, "delete_option( 'site_dispatch_update' );\n", '', 'stored update left behind', 'wp-admin: Deinstallation restlos' ),
 	it( UNI, 'uninstall file does nothing when called outside of an uninstall', UNINSTALL, "defined( 'WP_UNINSTALL_PLUGIN' ) || exit;\n", '', 'uninstall guard removed', 'wp-admin: Deinstallation' ),
 
@@ -541,9 +555,9 @@ export const INTEGRATION = [
 	it( UCHK, 'signed manifest with an extra field against the waiting period stores nothing', VERIFY, NAMES_CHECK, "\tif ( array_diff( array( 'requires_php', 'requires_wp', 'schema', 'sha512', 'slug', 'version', 'zip' ), $names ) ) {", 'extra manifest fields ignored', 'Update: Manifest-Felder gegen die Wartezeit' ),
 	it( UCHK, 'signed manifest that needs a newer wordpress or php stores nothing', VERIFY, ACCEPT_RETURN, '\treturn site_dispatch_compare_versions( $offered, $current ) > 0\n\t\t&& site_dispatch_compare_versions( $php_has, $php_needs ) >= 0;', 'WordPress minimum not checked', 'Update' ),
 	it( UCHK, 'manifest of 8192 bytes is taken, one byte more is not', VERIFY, 'const SITE_DISPATCH_MANIFEST_MAX_BYTES = 8192;', 'const SITE_DISPATCH_MANIFEST_MAX_BYTES = 16384;', 'manifest limit doubled', 'Update: uebergrosses Manifest' ),
-	it( UCHK, 'redirect to http is not followed', UPD, URL_PATTERN, UP( '/^https?:\\/\\/[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?(?::443)?\\/[\\x21-\\x5b\\x5d-\\x7e]*\\z/' ), 'http redirects followed', 'Update: http' ),
+	it( UCHK, 'redirect to http is not followed', UPD, URL_PATTERN, UP( '/^https?:\\/\\/(?:(?!xn--)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}(?::443)?\\/[\\x21-\\x5b\\x5d-\\x7e]*\\z/' ), 'http redirects followed', 'Update: http' ),
 	it( UCHK, 'redirect to a relative address, another port or an address with a user is not followed', UPD, '\t\t$target   = is_string( $location ) ? site_dispatch_redirect_target( $location ) : null;', "\t\t$target   = is_string( $location ) ? site_dispatch_redirect_target( 0 === strpos( $location, '//' ) ? 'https:' . $location : $location ) : null;", 'protocol relative redirects completed with https (port and user variants are refused by the test reroute before the plugin can be seen following them; UpdaterTest covers those)', 'Update: http' ),
-	it( UCHK, 'five redirects are followed, the sixth is not', UPD, 'const SITE_DISPATCH_REDIRECT_MAX   = 5;', 'const SITE_DISPATCH_REDIRECT_MAX   = 6;', 'one redirect more', 'Update' ),
+	it( UCHK, 'five redirects are followed, the sixth is not', UPD, 'const SITE_DISPATCH_REDIRECT_MAX      = 5;', 'const SITE_DISPATCH_REDIRECT_MAX      = 6;', 'one redirect more', 'Update' ),
 	it( UCHK, 'second check of the same release keeps the local time', UPD, NEXT_SAME, '', 'every check restarts the clock', 'Update: Wartezeit' ),
 	it( UCHK, 'new version starts the clock again', UPD, "\t\t\t'first_seen' => $now,", "\t\t\t'first_seen' => $stored['first_seen'] ?? $now,", 'old stamp kept on a new version', 'Update: Wartezeit' ),
 	it( UCHK, 'other bytes for the same version start the clock again', UPD, "\tif ( null !== $stored && ( $stored['manifest'] ?? null ) === $manifest_bytes && ( $stored['version'] ?? null ) === $manifest['version'] ) {", "\tif ( null !== $stored && ( $stored['version'] ?? null ) === $manifest['version'] ) {", 'manifest bytes not compared, only the version', 'Update: ausgetauschtes ZIP' ),
@@ -551,12 +565,12 @@ export const INTEGRATION = [
 	it( UCHK, 'release that was replaced by an older one drops the waiting update', UPD, "\tif ( 'not_newer' === $verdict || 'unfit' === $verdict ) {", "\tif ( 'unfit' === $verdict ) {", 'not newer no longer deletes', 'Update: Rueckruf' ),
 	it( UCHK, 'server that does not answer keeps the waiting update', UPD, "\tif ( 'ok' !== $fetch ) {\n\t\treturn array( 'action' => 'keep' );\n\t}", "\tif ( 'ok' !== $fetch ) {\n\t\treturn array( 'action' => 'delete' );\n\t}", 'a failed fetch cancels the waiting update', 'Update' ),
 	it( UCHK, 'server error keeps the waiting update', UPD, "\tif ( 404 === $answer['code'] ) {\n\t\t$fetch = 'gone';", "\tif ( 200 !== $answer['code'] ) {\n\t\t$fetch = 'gone';", 'any non-200 counts as gone', 'Update' ),
-	it( UCHK, 'invalid release keeps the waiting update', UPD, "\tif ( 'ok' !== $verdict ) {\n\t\treturn array( 'action' => 'keep' );\n\t}", "\tif ( 'ok' !== $verdict ) {\n\t\treturn array( 'action' => 'delete' );\n\t}", 'an invalid signature cancels the waiting update', 'Update: Rueckruf' ),
+	it( UCHK, 'invalid release keeps the waiting update', UPD, "\tif ( 'not_newer' !== $verdict && 'unfit' !== $verdict && 'ok' !== $verdict ) {\n\t\treturn array( 'action' => 'keep' );\n\t}", "\tif ( 'not_newer' !== $verdict && 'unfit' !== $verdict && 'ok' !== $verdict ) {\n\t\treturn array( 'action' => 'delete' );\n\t}", 'an invalid signature cancels the waiting update', 'Update: Rueckruf' ),
 	it( UCHK, 'admin page shows the waiting update and when it installs', ADMIN, "(string) wp_date( 'Y-m-d H:i', $first_seen + SITE_DISPATCH_UPDATE_DELAY )", "(string) wp_date( 'Y-m-d H:i', $first_seen )", 'first-seen time shown as install time', 'wp-admin' ),
 	it( UCHK, 'admin page shows no update whose signature does not hold', UPD, "\tif ( 'ok' !== Site_Dispatch_Memo::$verdicts[ $mark ] || null === $manifest || $manifest['version'] !== $stored['version'] ) {", "\tif ( null === $manifest || $manifest['version'] !== $stored['version'] ) {", 'verdict not checked when reading the stored update', 'wp-admin' ),
 
 	// ----- catalogue "Update": offer -----
-	it( UOFF, 'before 72 hours there is no offer', UPD, 'const SITE_DISPATCH_UPDATE_DELAY   = 259200;', 'const SITE_DISPATCH_UPDATE_DELAY   = 25920;', 'digit lost in the delay', 'Update: Wartezeit' ),
+	it( UOFF, 'before 72 hours there is no offer', UPD, 'const SITE_DISPATCH_UPDATE_DELAY      = 259200;', 'const SITE_DISPATCH_UPDATE_DELAY      = 25920;', 'digit lost in the delay', 'Update: Wartezeit' ),
 	it( UOFF, 'after 72 hours the offer is there', UPD, "\t\t'requires'     => $update['manifest']['requires_wp'],\n\t\t'requires_php' => $update['manifest']['requires_php'],", "\t\t'requires'     => $update['manifest']['requires_php'],\n\t\t'requires_php' => $update['manifest']['requires_wp'],", 'minimum versions swapped in the offer', 'Update' ),
 	it( UOFF, 'with the switch on the offer is there at once', UPD, "\t\t'due'        => site_dispatch_update_due( $stored['first_seen'], time(), (bool) get_option( 'site_dispatch_early_updates', false ) ),", "\t\t'due'        => site_dispatch_update_due( $stored['first_seen'], time(), false ),", 'switch for immediate updates ignored', 'Update' ),
 	it( UOFF, 'a local time in the future does not open the offer', UPD, DUE_RETURN, '\treturn $first_seen > $now || $now - $first_seen >= SITE_DISPATCH_UPDATE_DELAY;', 'a stamp in the future counts as due', 'Update: Wartezeit' ),
@@ -582,12 +596,12 @@ export const INTEGRATION = [
 
 	// ----- catalogue "Update": install -----
 	it( UINS, 'automatic update with the switch on installs the new version', UPD, "\t\t\t'timeout'             => '' === $file ? 15 : 60,", "\t\t\t'timeout'             => '' === $file ? 15 : 30,", 'download timeout halved', 'Update' ),
-	it( UINS, 'automatic update after 72 hours installs the new version', UPD, 'const SITE_DISPATCH_UPDATE_DELAY   = 259200;', 'const SITE_DISPATCH_UPDATE_DELAY   = 259200 * 2;', 'waiting period doubled', 'Update: Wartezeit' ),
+	it( UINS, 'automatic update after 72 hours installs the new version', UPD, 'const SITE_DISPATCH_UPDATE_DELAY      = 259200;', 'const SITE_DISPATCH_UPDATE_DELAY      = 259200 * 2;', 'waiting period doubled', 'Update: Wartezeit' ),
 	itEdits( UINS, 'automatic update before 72 hours installs nothing', 'waiting period enforced neither at the offer nor at the download (two layers)', 'Update: Wartezeit', [
 		{ file: UPD, search: LIST_DUE, replace: '\tif ( null === $update || null === $url ) {\n\t\treturn $value;\n\t}' },
 		{ file: UPD, search: PRE_DUE, replace: '\tif ( null === $update || null === $url ) {\n\t\treturn site_dispatch_update_refused();\n\t}' },
 	] ),
-	it( UINS, 'update now in wp-admin installs through the same checks', UPD, "\t$entries  = is_array( $listing ) ? array_values( array_diff( $listing, array( '.', '..' ) ) ) : array();", "\t$entries  = is_array( $listing ) ? array_values( array_diff( $listing, array( '..' ) ) ) : array();", 'dot entry not excluded, every real install is refused', 'Update' ),
+	it( UINS, 'update now in wp-admin installs through the same checks', UPD, "\t$entries  = is_array( $listing ) ? array_keys( $listing ) : array();", "\t$entries  = is_array( $listing ) ? array_merge( array( '.' ), array_keys( $listing ) ) : array();", 'a stray entry in the listing, every real install is refused', 'Update' ),
 	itEdits( UINS, 'update now before 72 hours installs nothing', 'waiting period enforced neither at the offer nor at the download (two layers)', 'Update: Jetzt aktualisieren am Pruefweg vorbei', [
 		{ file: UPD, search: LIST_DUE, replace: '\tif ( null === $update || null === $url ) {\n\t\treturn $value;\n\t}' },
 		{ file: UPD, search: PRE_DUE, replace: '\tif ( null === $update || null === $url ) {\n\t\treturn site_dispatch_update_refused();\n\t}' },
@@ -631,7 +645,7 @@ export const INTEGRATION = [
 	itEdits( UINS, 'server that does not answer at install time is refused', 'status and size checks dropped; the hash of an empty file still fails (three layers)', 'Update', [
 		{ file: UPD, search: "\t$good  = 200 === $answer['code']\n\t\t&& is_int( $size ) && $size > 0 && $size <= SITE_DISPATCH_ZIP_MAX_BYTES\n", replace: '\t$good  = is_int( $size ) && $size <= SITE_DISPATCH_ZIP_MAX_BYTES\n' },
 	], 'survive' ),
-	it( UINS, 'redirect of the zip to http is not followed', UPD, URL_PATTERN, UP( '/^https?:\\/\\/[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?(?::443)?\\/[\\x21-\\x5b\\x5d-\\x7e]*\\z/' ), 'http redirects followed', 'Update: http' ),
+	it( UINS, 'redirect of the zip to http is not followed', UPD, URL_PATTERN, UP( '/^https?:\\/\\/(?:(?!xn--)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}(?::443)?\\/[\\x21-\\x5b\\x5d-\\x7e]*\\z/' ), 'http redirects followed', 'Update: http' ),
 	it( UINS, 'refused install leaves no temp file behind', UPD, '\tif ( ! $good ) {\n\t\twp_delete_file( $file );\n\t\treturn site_dispatch_update_refused();\n\t}', '\tif ( ! $good ) {\n\t\treturn site_dispatch_update_refused();\n\t}', 'temp file not deleted on refusal', 'Update' ),
 	it( UINS, 'update of another plugin passes all filters untouched', UPD, '\tif ( ! $own_target && ! $own_package ) {\n\t\treturn $reply;\n\t}', '\tif ( ! $own_target && ! $own_package ) {\n\t\treturn site_dispatch_update_refused();\n\t}', 'foreign downloads refused', 'Update: fremde Plugins unberuehrt' ),
 	it( UINS, 'the own package address for another target is refused', UPD, '\tif ( ! $own_target ) {\n\t\treturn site_dispatch_update_refused();\n\t}', '\tif ( ! $own_target ) {\n\t\treturn $reply;\n\t}', 'own package for another plugin handed back to WordPress', 'Invariante 7: nur der eigene Slug' ),
@@ -641,9 +655,16 @@ export const INTEGRATION = [
 	// ----- catalogue "Update": keys -----
 	it( UKEY, 'key change: new keys arrive with a release signed by a known key, old keys stop counting', VERIFY, VERIFY_LOOP_INT, '\t\tforeach ( array_slice( $keys, 0, 1 ) as $key ) {\n\t\t\tif ( sodium', 'only the work key checked', 'Update: Schluesselwechsel' ),
 	itEdits( UKEY, 'build with an http release address fetches nothing', 'http allowed for the release base and for every fetched address (two layers)', 'Update: http', [
-		{ file: UPD, search: BASE_PATTERN, replace: BP( '/^https?:\\/\\/[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?(?:\\/[A-Za-z0-9._-]+)+\\z/' ) },
-		{ file: UPD, search: URL_PATTERN, replace: UP( '/^https?:\\/\\/[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?(?::443)?\\/[\\x21-\\x5b\\x5d-\\x7e]*\\z/' ) },
+		{ file: UPD, search: BASE_PATTERN, replace: BP( '/^https?:\\/\\/(?:(?!xn--)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}(?:\\/[A-Za-z0-9._-]+)+\\z/' ) },
+		{ file: UPD, search: URL_PATTERN, replace: UP( '/^https?:\\/\\/(?:(?!xn--)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}(?::443)?\\/[\\x21-\\x5b\\x5d-\\x7e]*\\z/' ) },
 	] ),
 	it( UKEY, 'keys and release address cannot be changed at run time', UPD, "\t$manifest_url = site_dispatch_release_url( SITE_DISPATCH_RELEASE_BASE, 'manifest.json' );\n\t$sig_url      = site_dispatch_release_url( SITE_DISPATCH_RELEASE_BASE, 'manifest.json.sig' );", "\t$base         = (string) get_option( 'site_dispatch_release_base', SITE_DISPATCH_RELEASE_BASE );\n\t$manifest_url = site_dispatch_release_url( $base, 'manifest.json' );\n\t$sig_url      = site_dispatch_release_url( $base, 'manifest.json.sig' );", 'release address read from an option', 'Invariante 4: Update-Quelle fest im Code' ),
+
+	// ----- Phase 6 fixes (review A): replay protection, second-hash invariant, WP_Filesystem listing -----
+	it( UCHK, 'an older signed release served again is ignored, the waiting update stays', UPD, '\tif ( $order < 0 ) {\n\t\treturn array( \'action\' => \'keep\' );\n\t}', '\tif ( false ) {\n\t\treturn array( \'action\' => \'keep\' );\n\t}', 'replay protection removed, an old signed manifest drops or replaces the waiting update', 'Update: gleiche und niedrigere Version (M-01)' ),
+	it( UCHK, 'after a deleted release a lower version is ignored, the same one is taken again', UPD, "\t$raw = get_option( SITE_DISPATCH_HIGH_WATER_OPTION, '' );", "\t$raw = '';", 'the mark is never read back, after a deletion anything is accepted again', 'Update: Rueckruf (M-01)' ),
+	it( UCHK, 'a release of the installed version stores nothing and leaves no mark', UPD, "\treturn site_dispatch_highest_version( array( is_string( $raw ) ? $raw : '', SITE_DISPATCH_VERSION ) );", "\treturn site_dispatch_highest_version( array( is_string( $raw ) ? $raw : '' ) );", 'the installed version does not count for the mark, a release at that version writes one', 'Update (M-01)' ),
+	it( UINS, 'an install on which the second hash never ran is refused at the folder check', UPD, '\tif ( null !== Site_Dispatch_Memo::$package ) {\n\t\tSite_Dispatch_Memo::$package = null;\n\t\treturn site_dispatch_update_refused();\n\t}\n\t// The unpacked folder', '\tSite_Dispatch_Memo::$package = null;\n\t// The unpacked folder', 'the folder check forgets the package instead of refusing, an unpacking without the second hash goes through', 'Update: Dateitausch (L-02)' ),
+	it( UINS, 'the folder check lists the unpacked package through WP_Filesystem, not through PHP', UPD, '\t$listing  = $wp_filesystem instanceof WP_Filesystem_Base ? $wp_filesystem->dirlist( $remote_source, false, false ) : false;\n\t$entries  = is_array( $listing ) ? array_keys( $listing ) : array();', "\t$listing  = is_dir( $remote_source ) ? scandir( $remote_source ) : false;\n\t$entries  = is_array( $listing ) ? array_values( array_diff( $listing, array( '.', '..' ) ) ) : array();", 'back to the PHP listing, which cannot see the remote folder of an FTP or SSH host', 'Update: ZIP mit falschem Ordner (L-01)' ),
 ];
 export const M = [ ...PHP, ...TOOLS, ...INTEGRATION ];

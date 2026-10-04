@@ -24,7 +24,14 @@ npm run test:js                        # assets/admin.js in a vm sandbox
 npm run test:tools                     # release tools, against throwaway repositories in a temp folder
 npm test                               # integration tests in WordPress Playground, about 25 minutes
 npm run playground                     # the admin page in a local Playground, with the fake server
+node qa/red-runs.mjs --kinds=php,tools # red runs: one production mutation per test case, about 7 minutes
+node qa/red-runs.mjs --kinds=integration --specs=update-check.test.mjs   # Playground red runs, one file
+node qa/static-red-runs.mjs            # red runs for the static and admin.js tests, about a minute
 ```
+
+Red runs prove that every test can fail: `qa/red-runs-mutations.mjs` holds one realistic bug per
+test case, the harness applies it to a throwaway copy and expects exactly that case to go red. The
+protocol of the last full run is `qa/red-runs-result.md`.
 
 Needs PHP 7.4 or newer with the `sodium` extension, Node 20.18 or newer, and
 [gitleaks](https://github.com/gitleaks/gitleaks) on the PATH. Without gitleaks the pre-commit hook
