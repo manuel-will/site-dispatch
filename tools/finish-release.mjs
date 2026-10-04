@@ -9,7 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { buildRelease, checkPins, filesFromCommit, git, readBase, readKeys, sha512 } from './lib/release.mjs';
+import { buildRelease, checkPins, checkReleaseSet, filesFromCommit, git, readBase, readKeys, sha512 } from './lib/release.mjs';
 import { NAMESPACE, readArmored, verifyRaw } from './lib/sshsig.mjs';
 
 const here = path.dirname( fileURLToPath( import.meta.url ) );
@@ -51,6 +51,7 @@ try {
 		refuse( 'the commit changed since the build. Build again.' );
 	}
 	const files = filesFromCommit( repo );
+	checkReleaseSet( files );
 	checkPins( files, git( repo, [ 'show', 'HEAD:tools/production-pins.json' ] ).toString( 'utf8' ) );
 	const again = buildRelease( files );
 	if ( ! again.zip.equals( zip ) || ! again.manifest.equals( manifest ) || sha512( zip ) !== build.sha512 ) {

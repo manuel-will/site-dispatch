@@ -17,6 +17,7 @@ tests/vectors/** -text
 /phpstan.neon.dist export-ignore
 /phpcs.xml.dist    export-ignore
 /docs              export-ignore
+/qa                export-ignore
 /tests             export-ignore
 /tools             export-ignore
 /PROTOCOL.md       export-ignore

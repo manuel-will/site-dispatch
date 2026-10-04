@@ -6,9 +6,9 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { zipList, zipStore } from '../../tools/lib/zip.mjs';
 import { makeKeyPair, readArmored, sshsigBlob, verifyRaw } from '../../tools/lib/sshsig.mjs';
-import { buildRelease, filesFromCommit, filesFromFolder, manifestBytes, readMain, setVersion } from '../../tools/lib/release.mjs';
+import { buildRelease, checkReleaseSet, filesFromCommit, filesFromFolder, manifestBytes, readMain, setVersion } from '../../tools/lib/release.mjs';
 import { testFiles, testRelease } from '../../tools/build-test-zip.mjs';
-import { ROOT, SSH_KEYGEN, armor, makeRepo, removeFolder } from './helpers.mjs';
+import { ROOT, SSH_KEYGEN, armor, commitAll, makeRepo, removeFolder, runTool } from './helpers.mjs';
 
 const entries = () => [
 	{ name: 'site-dispatch/site-dispatch.php', data: Buffer.from( '<?php\n// main\n' ) },
@@ -133,6 +133,25 @@ test( 'release: the commit gives the same file set as the folder, nothing from t
 		}
 		assert.ok( fromCommit.some( ( file ) => 'includes/updater.php' === file.name ) );
 		assert.ok( fromCommit.some( ( file ) => 'site-dispatch.php' === file.name ) );
+	} finally {
+		removeFolder( repo );
+	}
+} );
+
+test( 'release: a folder outside the release set stops the build', () => {
+	// The export of this repository itself (HEAD) holds nothing but the release set. This is the
+	// check that found qa/ inside the pilot ZIP on 2026-10-04.
+	assert.doesNotThrow( () => checkReleaseSet( filesFromCommit( ROOT ) ) );
+	const repo = makeRepo();
+	try {
+		fs.mkdirSync( path.join( repo, 'qa' ) );
+		fs.writeFileSync( path.join( repo, 'qa', 'harness.mjs' ), '// not part of a release\n' );
+		commitAll( repo, 'a folder that .gitattributes does not export-ignore' );
+		assert.throws( () => checkReleaseSet( filesFromCommit( repo ) ), /not part of a release.*qa/ );
+		const run = runTool( 'build-release.mjs', repo );
+		assert.equal( run.code, 1 );
+		assert.match( run.err, /Refused: not part of a release.*qa/ );
+		assert.ok( ! fs.existsSync( path.join( repo, 'dist' ) ) );
 	} finally {
 		removeFolder( repo );
 	}

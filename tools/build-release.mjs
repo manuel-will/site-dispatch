@@ -7,7 +7,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildRelease, checkPins, filesFromCommit, git, sha512 } from './lib/release.mjs';
+import { buildRelease, checkPins, checkReleaseSet, filesFromCommit, git, sha512 } from './lib/release.mjs';
 
 const here = path.dirname( fileURLToPath( import.meta.url ) );
 
@@ -27,6 +27,7 @@ try {
 	}
 	commit = git( repo, [ 'rev-parse', 'HEAD' ] ).toString( 'utf8' ).trim();
 	const files = filesFromCommit( repo );
+	checkReleaseSet( files );
 	checkPins( files, git( repo, [ 'show', 'HEAD:tools/production-pins.json' ] ).toString( 'utf8' ) );
 	release = buildRelease( files );
 	if ( '' !== git( repo, [ 'tag', '--list', 'v' + release.version ] ).toString( 'utf8' ).trim() ) {

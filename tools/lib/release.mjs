@@ -160,6 +160,15 @@ export function buildRelease( files ) {
 	return { version, zip, zipName: SLUG + '-' + version + '.zip', manifest };
 }
 
+// Every top level name of the export has to be in RELEASE_SET. A new folder in the repository
+// that is not export-ignored in .gitattributes would otherwise ship inside the plugin ZIP.
+export function checkReleaseSet( files ) {
+	const stray = [ ...new Set( files.map( ( file ) => file.name.split( '/' )[ 0 ] ) ) ].filter( ( name ) => ! RELEASE_SET.includes( name ) );
+	if ( 0 !== stray.length ) {
+		throw new Error( 'not part of a release, add export-ignore in .gitattributes: ' + stray.join( ', ' ) );
+	}
+}
+
 export function checkPins( files, pinsText ) {
 	const pins = JSON.parse( pinsText );
 	for ( const name of [ 'includes/keys.php', 'includes/source.php' ] ) {
