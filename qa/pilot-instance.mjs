@@ -117,8 +117,7 @@ if ( 'i01' === command ) {
 }
 if ( 'i01-off' === command ) {
 	fs.rmSync( path.join( muDir, MU_SHIM ), { force: true } );
-	console.log( 'I-01 shim removed.' );
-	process.exit( 0 );
+	console.log( 'I-01 shim removed. Clearing the stored update list it wrote to.' );
 }
 
 const cli = await runCLI( {
@@ -233,6 +232,11 @@ try {
 			wp_update_plugins();
 			return true;
 		` );
+	} else if ( 'i01-off' === command ) {
+		await php( `
+			delete_site_transient( 'update_plugins' );
+			return true;
+		` );
 	}
 	if ( 'install' !== command ) {
 		const state = await php( STATE );
@@ -245,6 +249,5 @@ try {
 		}
 	}
 } finally {
-	await cli.server.close();
-	await cli.playground.exit();
+	await cli[ Symbol.asyncDispose ]();
 }
