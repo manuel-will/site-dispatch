@@ -97,7 +97,9 @@ site remembers the highest version it has seen validly signed and ignores anythi
 publish a lower version after a higher one, never sign a version twice (a fix gets a new number),
 and after deleting a release give the next one a higher version than the deleted one: the sites
 refuse a deleted version for good. A bad release is recalled by deleting it within the waiting
-period or by publishing a higher version.
+period or by publishing a higher version. After a deletion GitHub shows the previous release as
+latest; a site that was waiting on the deleted one reads that as the recall (the first pilot on
+2026-10-04 found that only a `404` counted, fixed in 0.1.3).
 
 A key change is a release like any other: new keys in `includes/keys.php`, new hash in
 `tools/production-pins.json` and in `.gitleaks.toml`, signed with a key the installed version knows.

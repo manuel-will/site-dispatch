@@ -277,14 +277,18 @@ fails, because the namespace is part of the signed blob.
 4. Recall, high-water mark and recall floor. The site remembers the highest version it has ever
    seen with a valid signature (option `site_dispatch_high_water`, never below the installed
    version or a waiting one). A validly signed manifest **below** that mark is a replay of an old
-   release and changes nothing. A waiting update is dropped when the latest release is gone (`404`
-   on the manifest); its version becomes the recall floor (option `site_dispatch_recalled`) and
-   neither it nor anything below it is ever accepted again, so the deleted release cannot be
-   uploaded again. Above the mark: a signed manifest that is not newer than the installed version or
-   does not fit the site drops a waiting update. A transport error, any other status and an invalid
-   signature change nothing. So deleting a release cancels it on every site at its next daily check.
-   Whoever controls the release page without a signing key can delete, but can neither start nor
-   restore an update and cannot move a site to a release it has already seen superseded or recalled.
+   release and changes nothing, with one exception: while an update is waiting, a validly signed
+   latest release with a **lower** version than the waiting one recalls it. That is what GitHub
+   shows after the waiting release was deleted: `404` only when no release is left, otherwise the
+   previous release as latest. In both cases the waiting update is dropped and its version becomes
+   the recall floor (option `site_dispatch_recalled`); neither it nor anything below it is ever
+   accepted again, so the deleted release cannot be uploaded again. Above the mark: a signed manifest
+   that is not newer than the installed version or does not fit the site drops a waiting update. A
+   transport error, any other status and an invalid signature change nothing. So deleting a release
+   cancels it on every site at its next daily check. Whoever controls the release page without a
+   signing key can delete, or cancel a waiting update by serving an older release as latest (the
+   same power as deleting, and the watch mails both), but can neither start nor restore an update
+   and cannot move a site to a release it has already seen superseded or recalled.
 5. Install, automatic or by click: verify the stored manifest again, check the waiting period
    again, download the ZIP from the address built from the manifest (the package address WordPress
    hands over is ignored), check the size, compare SHA-512 of the local file with `hash_equals`,

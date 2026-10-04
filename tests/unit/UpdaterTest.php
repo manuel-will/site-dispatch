@@ -455,19 +455,32 @@ final class UpdaterTest extends TestCase {
 		);
 	}
 
-	// The high-water mark: a signed manifest below the highest version ever seen changes nothing.
+	// The high-water mark: a signed manifest below the highest version ever seen changes nothing,
+	// with one exception: while an update waits, a lower latest release recalls it. That is what
+	// GitHub serves once the waiting release was deleted and an older one remains (404 only when
+	// none is left), found live in the first pilot on 2026-10-04.
 
-	public function test_next_replayed_older_release_cannot_drop_the_waiting_update(): void {
+	public function test_next_lower_latest_release_recalls_the_waiting_update(): void {
 		$waiting = self::manifest(
 			array(
 				'version' => '1.2.4',
 				'zip'     => 'site-dispatch-1.2.4.zip',
 			)
 		);
-		$stored  = array_merge( self::stored( $waiting, self::NOW - 100 ), array( 'version' => '1.2.4' ) );
-		// The attacker serves the original manifest of 1.2.3 again, validly signed, installed is 1.2.3.
-		$this->assertSame( array( 'action' => 'keep' ), site_dispatch_next_update( $stored, 'ok', 'not_newer', self::manifest(), 'y', self::NOW, '1.2.3' ) );
-		$this->assertSame( array( 'action' => 'keep' ), site_dispatch_next_update( $stored, 'ok', 'unfit', self::manifest(), 'y', self::NOW, '1.2.3' ) );
+		$stored   = array_merge( self::stored( $waiting, self::NOW - 100 ), array( 'version' => '1.2.4' ) );
+		$recall   = array(
+			'action'   => 'delete',
+			'recalled' => '1.2.4',
+		);
+		$manifest = self::manifest();
+		$sig      = self::sign( $manifest, self::$secret_a );
+		// Latest is 1.2.3 again, validly signed, installed is 1.2.3: the waiting 1.2.4 was deleted.
+		$this->assertSame( $recall, site_dispatch_next_update( $stored, 'ok', 'not_newer', $manifest, 'y', self::NOW, '1.2.4' ) );
+		$this->assertSame( $recall, site_dispatch_next_update( $stored, 'ok', 'unfit', $manifest, 'y', self::NOW, '1.2.4' ) );
+		$this->assertSame( $recall, site_dispatch_next_update( $stored, 'ok', 'ok', $manifest, $sig, self::NOW, '1.2.4' ), 'a lower release that would fit recalls as well' );
+		$this->assertSame( $recall, site_dispatch_next_update( $stored, 'ok', 'ok', $manifest, $sig, self::NOW, '1.2.4', '1.2.3' ), 'also when the lower release sits on the recall floor' );
+		$this->assertSame( array( 'action' => 'keep' ), site_dispatch_next_update( $stored, 'ok', 'invalid', $manifest, 'y', self::NOW, '1.2.4' ), 'without a valid signature nothing changes' );
+		$this->assertSame( array( 'action' => 'keep' ), site_dispatch_next_update( null, 'ok', 'ok', $manifest, $sig, self::NOW, '1.2.4' ), 'nothing waiting: a replay below the mark changes nothing' );
 	}
 
 	public function test_next_replayed_older_release_is_not_stored_below_the_mark(): void {

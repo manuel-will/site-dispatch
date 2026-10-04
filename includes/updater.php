@@ -183,8 +183,12 @@ function site_dispatch_read_stored( $raw ): ?array {
  * A recall is durable: when a 404 drops a waiting update, its version becomes the recall floor
  * (option `site_dispatch_recalled`) and is never accepted again, nor is anything below it. Without
  * the floor the deleted release could be uploaded again (its signature stays valid) and would be
- * installed 72 hours later. At the mark only the bytes already waiting count: other bytes for the
- * same version are a replay of a superseded variant and change nothing, a fix gets a new number.
+ * installed 72 hours later. The same recall happens when the latest release is validly signed but
+ * lower than the waiting version: GitHub serves the previous release as latest once the newest is
+ * deleted and answers 404 only when none is left (phase 8, 2026-10-04). Whoever controls the
+ * release page can cancel a waiting update this way, exactly as by deleting it, and nothing more.
+ * At the mark only the bytes already waiting count: other bytes for the same version are a replay
+ * of a superseded variant and change nothing, a fix gets a new number.
  *
  * @param array<mixed>|null $stored         The stored update from site_dispatch_read_stored().
  * @param string            $fetch          'ok', 'gone' or 'failed'.
@@ -214,13 +218,22 @@ function site_dispatch_next_update( ?array $stored, string $fetch, string $verdi
 	if ( null === $manifest ) {
 		return array( 'action' => 'keep' );
 	}
+	$waiting = null !== $stored && is_string( $stored['version'] ?? null ) ? $stored['version'] : '';
+	// The newest release is now a lower version than the one waiting: the waiting release was taken
+	// off the release page. GitHub answers 404 only when no release is left, otherwise it serves the
+	// previous release as latest (seen live in phase 8). Both are the same recall.
+	if ( '' !== $waiting && site_dispatch_version_order( $manifest['version'], $waiting ) < 0 ) {
+		return array(
+			'action'   => 'delete',
+			'recalled' => $waiting,
+		);
+	}
 	$floor = site_dispatch_highest_version( array( $recalled ) );
 	if ( '' !== $floor && site_dispatch_version_order( $manifest['version'], $floor ) <= 0 ) {
 		return array( 'action' => 'keep' );
 	}
-	$waiting = null !== $stored && is_string( $stored['version'] ?? null ) ? $stored['version'] : '';
-	$mark    = site_dispatch_highest_version( array( $high_water, $waiting ) );
-	$order   = site_dispatch_version_order( $manifest['version'], $mark );
+	$mark  = site_dispatch_highest_version( array( $high_water, $waiting ) );
+	$order = site_dispatch_version_order( $manifest['version'], $mark );
 	if ( $order < 0 ) {
 		return array( 'action' => 'keep' );
 	}

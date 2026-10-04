@@ -231,14 +231,20 @@ test( 'deleted release drops the waiting update', async () => {
 	assert.equal( await check(), null );
 } );
 
-test( 'an older signed release served again is ignored, the waiting update stays', async () => {
-	// Replay: every manifest ever published stays validly signed. Whoever controls the release page
-	// can serve an old one as latest, but the site remembers the highest version it has seen.
+test( 'an older release served as latest recalls the waiting update, nothing below the mark is ever stored', async () => {
+	// Deleting the newest release on GitHub leaves the previous one as latest; 404 comes only when no
+	// release is left (the first pilot found that live on 2026-10-04). So a lower latest release is
+	// the recall of what waits. Whoever controls the release page gains nothing beyond deleting:
+	// every manifest ever published stays validly signed, but the site remembers the highest version
+	// it has seen and the recall floor, and refuses everything below.
+	const recalled = `wp_cache_flush(); return get_option( 'site_dispatch_recalled', null );`;
 	const first = await storedAfter( good() );
-	assert.deepEqual( await storedAfter( good( '0.1.0' ) ), first, 'the installed version served again drops nothing' );
+	assert.equal( first.version, '0.1.1' );
+	assert.equal( await storedAfter( good( '0.1.0' ) ), null, 'the installed version served as latest recalls the waiting 0.1.1' );
+	assert.equal( await site.php( recalled ), '0.1.1' );
+	assert.equal( await storedAfter( good( '0.1.1' ) ), null, 'the recalled 0.1.1 served again is refused for good' );
 	const newer = await storedAfter( good( '0.1.2' ) );
 	assert.equal( newer.version, '0.1.2' );
-	assert.deepEqual( await storedAfter( good( '0.1.1' ) ), newer, 'the replayed 0.1.1 neither drops nor replaces 0.1.2' );
 	const mark = await site.php( `
 		global $wpdb;
 		wp_cache_flush();
@@ -246,6 +252,9 @@ test( 'an older signed release served again is ignored, the waiting update stays
 	` );
 	assert.equal( mark.option_value, '0.1.2' );
 	assert.ok( [ 'no', 'off' ].includes( mark.autoload ), 'autoload is ' + mark.autoload );
+	assert.equal( await storedAfter( good( '0.1.1' ) ), null, 'the recalled 0.1.1 served as latest recalls 0.1.2 as well' );
+	assert.equal( await site.php( recalled ), '0.1.2' );
+	assert.equal( await site.php( `wp_cache_flush(); return get_option( 'site_dispatch_high_water', null );` ), '0.1.2', 'the mark never drops' );
 } );
 
 test( 'a deleted release is recalled for good, only a higher version is taken afterwards', async () => {
