@@ -271,17 +271,20 @@ fails, because the namespace is part of the signed blob.
 2. Accept only if `slug` is its own, `version` is strictly higher than the installed one, `zip`
    matches, and the WordPress and PHP minimums are met.
 3. A version seen for the first time gets a **local** timestamp. WordPress is offered the update
-   72 hours later, or at once if "install updates immediately" is on (default off). A manifest with
-   other bytes for the same version counts as new and starts the 72 hours again.
-4. Recall and the high-water mark. The site remembers the highest version it has ever seen with a
-   valid signature (option `site_dispatch_high_water`, never below the installed version or a
-   waiting one). A validly signed manifest **below** that mark is a replay of an old release and
-   changes nothing. At or above the mark: a waiting update is dropped when the latest release is
-   gone (`404` on the manifest) or when the signed manifest is not newer than the installed version
-   or does not fit the site. A transport error, any other status and an invalid signature change
-   nothing. So deleting a release cancels it on every site at its next daily check. Whoever
-   controls the release page without a signing key can delete, but can neither start nor restore an
-   update and cannot move a site to a release it has already seen superseded.
+   72 hours later, or at once if "install updates immediately" is on (default off). While an update
+   is waiting, other bytes for the same version are ignored: a version is signed once, a fix gets a
+   new number.
+4. Recall, high-water mark and recall floor. The site remembers the highest version it has ever
+   seen with a valid signature (option `site_dispatch_high_water`, never below the installed
+   version or a waiting one). A validly signed manifest **below** that mark is a replay of an old
+   release and changes nothing. A waiting update is dropped when the latest release is gone (`404`
+   on the manifest); its version becomes the recall floor (option `site_dispatch_recalled`) and
+   neither it nor anything below it is ever accepted again, so the deleted release cannot be
+   uploaded again. Above the mark: a signed manifest that is not newer than the installed version or
+   does not fit the site drops a waiting update. A transport error, any other status and an invalid
+   signature change nothing. So deleting a release cancels it on every site at its next daily check.
+   Whoever controls the release page without a signing key can delete, but can neither start nor
+   restore an update and cannot move a site to a release it has already seen superseded or recalled.
 5. Install, automatic or by click: verify the stored manifest again, check the waiting period
    again, download the ZIP from the address built from the manifest (the package address WordPress
    hands over is ignored), check the size, compare SHA-512 of the local file with `hash_equals`,
@@ -299,7 +302,8 @@ fails, because the namespace is part of the signed blob.
 
 A bad release is recalled with a higher version, or deleted within the waiting period. After a
 deletion the next release has to carry a higher version than the deleted one, because the sites
-remember what they have seen.
+remember what they have seen and refuse the deleted version for good. A version is never signed
+twice: a release with other bytes gets a new version number.
 
 The plugin needs `ZipArchive` to look into the ZIP before unpacking. Without it no update installs.
 

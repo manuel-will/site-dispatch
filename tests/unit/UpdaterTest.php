@@ -375,9 +375,45 @@ final class UpdaterTest extends TestCase {
 		$this->assertSame( array( 'action' => 'keep' ), site_dispatch_next_update( null, 'whatever', 'ok', $manifest, self::sign( $manifest, self::$secret_a ), self::NOW ) );
 	}
 
-	public function test_next_missing_release_deletes(): void {
+	public function test_next_missing_release_deletes_and_recalls_the_waiting_version(): void {
 		$stored = self::stored( self::manifest(), self::NOW - 100 );
-		$this->assertSame( array( 'action' => 'delete' ), site_dispatch_next_update( $stored, 'gone', 'invalid', '', '', self::NOW ) );
+		$this->assertSame(
+			array(
+				'action'   => 'delete',
+				'recalled' => '1.2.3',
+			),
+			site_dispatch_next_update( $stored, 'gone', 'invalid', '', '', self::NOW )
+		);
+		$this->assertSame( array( 'action' => 'delete' ), site_dispatch_next_update( null, 'gone', 'invalid', '', '', self::NOW ), 'nothing waiting, nothing recalled' );
+	}
+
+	public function test_next_recalled_version_is_never_taken_again(): void {
+		// The release was deleted while waiting; whoever controls the release page uploads the same
+		// signed files again. The site refuses it and everything below it, a higher version passes.
+		$manifest = self::manifest();
+		$this->assertSame( array( 'action' => 'keep' ), site_dispatch_next_update( null, 'ok', 'ok', $manifest, self::sign( $manifest, self::$secret_a ), self::NOW, '1.2.3', '1.2.3' ) );
+		$lower = self::manifest(
+			array(
+				'version' => '1.2.2',
+				'zip'     => 'site-dispatch-1.2.2.zip',
+			)
+		);
+		$this->assertSame( array( 'action' => 'keep' ), site_dispatch_next_update( null, 'ok', 'ok', $lower, self::sign( $lower, self::$secret_a ), self::NOW, '1.2.3', '1.2.3' ) );
+		$this->assertSame( array( 'action' => 'keep' ), site_dispatch_next_update( null, 'ok', 'not_newer', $manifest, 'y', self::NOW, '1.2.3', '1.2.3' ), 'a recalled version drops nothing either' );
+		$higher = self::manifest(
+			array(
+				'version' => '1.2.4',
+				'zip'     => 'site-dispatch-1.2.4.zip',
+			)
+		);
+		$next   = site_dispatch_next_update( null, 'ok', 'ok', $higher, self::sign( $higher, self::$secret_a ), self::NOW, '1.2.3', '1.2.3' );
+		$this->assertSame( 'store', $next['action'] );
+		$this->assertSame( '1.2.4', $next['high_water'] ?? null );
+	}
+
+	public function test_next_malformed_recall_floor_counts_as_none(): void {
+		$manifest = self::manifest();
+		$this->assertSame( 'store', site_dispatch_next_update( null, 'ok', 'ok', $manifest, self::sign( $manifest, self::$secret_a ), self::NOW, '', 'deleted' )['action'] );
 	}
 
 	public function test_next_invalid_release_keeps_the_stored_update(): void {
@@ -498,12 +534,12 @@ final class UpdaterTest extends TestCase {
 		$this->assertSame( self::NOW, $next['update']['first_seen'] ?? null );
 	}
 
-	public function test_next_other_bytes_for_the_same_version_start_the_clock_again(): void {
+	public function test_next_other_bytes_for_the_same_version_are_ignored(): void {
+		// A version is signed once. Other validly signed bytes at the waiting version are a superseded
+		// variant (or a second signing) and must not replace what waits, nor restart the clock.
 		$stored   = self::stored( self::manifest(), self::NOW - 100 );
 		$manifest = self::manifest( array( 'sha512' => str_repeat( 'cd', 64 ) ) );
-		$next     = site_dispatch_next_update( $stored, 'ok', 'ok', $manifest, self::sign( $manifest, self::$secret_a ), self::NOW );
-		$this->assertSame( 'store', $next['action'] );
-		$this->assertSame( self::NOW, $next['update']['first_seen'] ?? null );
+		$this->assertSame( array( 'action' => 'keep' ), site_dispatch_next_update( $stored, 'ok', 'ok', $manifest, self::sign( $manifest, self::$secret_a ), self::NOW ) );
 	}
 
 	public function test_next_manifest_that_does_not_parse_keeps(): void {

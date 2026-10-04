@@ -19,6 +19,7 @@ const SITE_DISPATCH_UPDATE_DELAY      = 259200;
 const SITE_DISPATCH_UPDATE_HOOK       = 'site_dispatch_update_check';
 const SITE_DISPATCH_UPDATE_OPTION     = 'site_dispatch_update';
 const SITE_DISPATCH_HIGH_WATER_OPTION = 'site_dispatch_high_water';
+const SITE_DISPATCH_RECALLED_OPTION   = 'site_dispatch_recalled';
 // Hosts in release addresses are plain names with a letters-only top level label and no punycode,
 // like the server host: no IP literal, no port but 443, no user, nothing that is not a name.
 const SITE_DISPATCH_URL_PATTERN  = '/^https:\/\/(?:(?!xn--)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}(?::443)?\/[\x21-\x5b\x5d-\x7e]*\z/';
@@ -179,6 +180,12 @@ function site_dispatch_read_stored( $raw ): ?array {
  * valid forever, and whoever controls the release page could serve one again to hold sites on an
  * old version or to drop a waiting update. Such a manifest changes nothing.
  *
+ * A recall is durable: when a 404 drops a waiting update, its version becomes the recall floor
+ * (option `site_dispatch_recalled`) and is never accepted again, nor is anything below it. Without
+ * the floor the deleted release could be uploaded again (its signature stays valid) and would be
+ * installed 72 hours later. At the mark only the bytes already waiting count: other bytes for the
+ * same version are a replay of a superseded variant and change nothing, a fix gets a new number.
+ *
  * @param array<mixed>|null $stored         The stored update from site_dispatch_read_stored().
  * @param string            $fetch          'ok', 'gone' or 'failed'.
  * @param string            $verdict        Verdict of site_dispatch_judge_release().
@@ -186,11 +193,16 @@ function site_dispatch_read_stored( $raw ): ?array {
  * @param string            $sig_raw        The raw signature.
  * @param int               $now            Local time.
  * @param string            $high_water     Highest version seen so far, '' if none.
- * @return array{action: string, update?: array{manifest: string, sig: string, version: string, first_seen: int}, high_water?: string} Action 'keep', 'delete' or 'store'; 'high_water' when the mark rises.
+ * @param string            $recalled       Highest version ever recalled by a 404, '' if none.
+ * @return array{action: string, update?: array{manifest: string, sig: string, version: string, first_seen: int}, high_water?: string, recalled?: string} Action 'keep', 'delete' or 'store'; 'high_water' when the mark rises, 'recalled' when a waiting update was recalled.
  */
-function site_dispatch_next_update( ?array $stored, string $fetch, string $verdict, string $manifest_bytes, string $sig_raw, int $now, string $high_water = '' ): array {
+function site_dispatch_next_update( ?array $stored, string $fetch, string $verdict, string $manifest_bytes, string $sig_raw, int $now, string $high_water = '', string $recalled = '' ): array {
 	if ( 'gone' === $fetch ) {
-		return array( 'action' => 'delete' );
+		$dropped = null !== $stored && is_string( $stored['version'] ?? null ) ? $stored['version'] : '';
+		return '' === $dropped ? array( 'action' => 'delete' ) : array(
+			'action'   => 'delete',
+			'recalled' => $dropped,
+		);
 	}
 	if ( 'ok' !== $fetch ) {
 		return array( 'action' => 'keep' );
@@ -200,6 +212,10 @@ function site_dispatch_next_update( ?array $stored, string $fetch, string $verdi
 	}
 	$manifest = site_dispatch_parse_manifest( $manifest_bytes );
 	if ( null === $manifest ) {
+		return array( 'action' => 'keep' );
+	}
+	$floor = site_dispatch_highest_version( array( $recalled ) );
+	if ( '' !== $floor && site_dispatch_version_order( $manifest['version'], $floor ) <= 0 ) {
 		return array( 'action' => 'keep' );
 	}
 	$waiting = null !== $stored && is_string( $stored['version'] ?? null ) ? $stored['version'] : '';
@@ -212,8 +228,10 @@ function site_dispatch_next_update( ?array $stored, string $fetch, string $verdi
 	if ( 'not_newer' === $verdict || 'unfit' === $verdict ) {
 		return array( 'action' => 'delete' ) + $raised;
 	}
-	if ( null !== $stored && ( $stored['manifest'] ?? null ) === $manifest_bytes && ( $stored['version'] ?? null ) === $manifest['version'] ) {
-		return array( 'action' => 'keep' ) + $raised;
+	// At the mark with an update waiting: the same bytes are the same release (the clock keeps
+	// running), other bytes for that version are a superseded variant and are ignored.
+	if ( null !== $stored && 0 === $order ) {
+		return array( 'action' => 'keep' );
 	}
 	// phpcs:disable WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Manifest and signature are bytes, the option holds text.
 	return array(
@@ -392,16 +410,33 @@ function site_dispatch_high_water(): string {
 }
 
 /**
- * Stores a risen high-water mark, without autoload.
+ * The recall floor of this site: the highest version a 404 has ever dropped, '' if none.
  *
+ * @return string
+ */
+function site_dispatch_recalled(): string {
+	$raw = get_option( SITE_DISPATCH_RECALLED_OPTION, '' );
+	return site_dispatch_highest_version( array( is_string( $raw ) ? $raw : '' ) );
+}
+
+/**
+ * Raises a version option (high-water mark, recall floor), without autoload. Never lowers it: two
+ * checks running at once cannot take the mark back.
+ *
+ * @param string $option  Option name.
  * @param string $version Well formed version.
  */
-function site_dispatch_store_high_water( string $version ): void {
+function site_dispatch_raise_version_option( string $option, string $version ): void {
 	if ( 1 !== preg_match( SITE_DISPATCH_VERSION_PATTERN, $version ) ) {
 		return;
 	}
-	delete_option( SITE_DISPATCH_HIGH_WATER_OPTION );
-	add_option( SITE_DISPATCH_HIGH_WATER_OPTION, $version, '', false );
+	$raw     = get_option( $option, '' );
+	$current = site_dispatch_highest_version( array( is_string( $raw ) ? $raw : '' ) );
+	if ( '' !== $current && site_dispatch_version_order( $version, $current ) <= 0 ) {
+		return;
+	}
+	delete_option( $option );
+	add_option( $option, $version, '', false );
 }
 
 /**
@@ -474,9 +509,12 @@ function site_dispatch_update_check(): void {
 		}
 	}
 	$stored = site_dispatch_read_stored( get_option( SITE_DISPATCH_UPDATE_OPTION, null ) );
-	$next   = site_dispatch_next_update( $stored, $fetch, $verdict, $manifest_bytes, $sig_raw, time(), site_dispatch_high_water() );
+	$next   = site_dispatch_next_update( $stored, $fetch, $verdict, $manifest_bytes, $sig_raw, time(), site_dispatch_high_water(), site_dispatch_recalled() );
 	if ( isset( $next['high_water'] ) ) {
-		site_dispatch_store_high_water( $next['high_water'] );
+		site_dispatch_raise_version_option( SITE_DISPATCH_HIGH_WATER_OPTION, $next['high_water'] );
+	}
+	if ( isset( $next['recalled'] ) ) {
+		site_dispatch_raise_version_option( SITE_DISPATCH_RECALLED_OPTION, $next['recalled'] );
 	}
 	if ( 'delete' === $next['action'] ) {
 		site_dispatch_store_update( null );
@@ -610,10 +648,12 @@ function site_dispatch_zip_names( string $file ): ?array {
 function site_dispatch_pre_download( $reply, $package, $upgrader, $hook_extra ) {
 	$own_target  = is_array( $hook_extra ) && isset( $hook_extra['plugin'] ) && site_dispatch_plugin_file() === $hook_extra['plugin'];
 	$own_package = is_string( $package ) && 0 === strpos( $package, SITE_DISPATCH_RELEASE_BASE . '/' );
+	// Whatever is downloaded next, a package left over from an own download that never reached the
+	// unpacking (disk full, mkdir failed) must not refuse it.
+	Site_Dispatch_Memo::$package = null;
 	if ( ! $own_target && ! $own_package ) {
 		return $reply;
 	}
-	Site_Dispatch_Memo::$package = null;
 	if ( ! $own_target ) {
 		return site_dispatch_update_refused();
 	}

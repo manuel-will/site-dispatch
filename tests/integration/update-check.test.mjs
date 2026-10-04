@@ -213,14 +213,16 @@ test( 'new version starts the clock again', async () => {
 	assert.ok( next.first_seen > aged + HOURS_72 - 60 );
 } );
 
-test( 'other bytes for the same version start the clock again', async () => {
+test( 'other bytes for the same version are ignored, the waiting update and its clock stay', async () => {
+	// A version is signed once. A second signing of 0.1.1 (or the superseded variant served again)
+	// must neither replace the waiting bytes nor restart the 72 hours.
 	const first = good();
-	await storedAfter( first );
-	const aged = await site.php( php.age( HOURS_72 ) );
+	const stored = await storedAfter( first );
+	await site.php( php.age( HOURS_72 ) );
 	const replaced = releaseAround( '0.1.1', Buffer.concat( [ first.zip ] ), keys[ 0 ], { requires_php: '7.4.0' } );
 	const next = await storedAfter( replaced );
-	assert.equal( next.manifest, replaced.manifest.toString( 'base64' ) );
-	assert.ok( next.first_seen > aged + HOURS_72 - 60 );
+	assert.equal( next.manifest, first.manifest.toString( 'base64' ), 'the waiting bytes stay' );
+	assert.equal( next.first_seen, stored.first_seen - HOURS_72, 'the clock keeps running' );
 } );
 
 test( 'deleted release drops the waiting update', async () => {
@@ -246,12 +248,29 @@ test( 'an older signed release served again is ignored, the waiting update stays
 	assert.ok( [ 'no', 'off' ].includes( mark.autoload ), 'autoload is ' + mark.autoload );
 } );
 
-test( 'after a deleted release a lower version is ignored, the same one is taken again', async () => {
-	await storedAfter( good( '0.1.2' ) );
+test( 'a deleted release is recalled for good, only a higher version is taken afterwards', async () => {
+	// Recall: the waiting 0.1.2 is deleted on GitHub. Uploading the same signed files again (anyone
+	// with access to the release page can, the signature stays valid) must not bring it back.
+	const published = good( '0.1.2' );
+	await storedAfter( published );
 	release.remove();
 	assert.equal( await check(), null );
-	assert.equal( await storedAfter( good( '0.1.1' ) ), null, 'below the mark' );
-	assert.equal( ( await storedAfter( good( '0.1.2' ) ) ).version, '0.1.2', 'at the mark' );
+	const floor = await site.php( `
+		global $wpdb;
+		wp_cache_flush();
+		return $wpdb->get_row( "SELECT option_value, autoload FROM {$wpdb->options} WHERE option_name = 'site_dispatch_recalled'", ARRAY_A );
+	` );
+	assert.equal( floor.option_value, '0.1.2' );
+	assert.ok( [ 'no', 'off' ].includes( floor.autoload ), 'autoload is ' + floor.autoload );
+	assert.equal( await storedAfter( good( '0.1.1' ) ), null, 'below the recalled version' );
+	assert.equal( await storedAfter( published ), null, 'the recalled release itself' );
+	assert.equal( ( await storedAfter( good( '0.1.3' ) ) ).version, '0.1.3', 'a higher version passes' );
+	// A second recall of a lower version never lowers the floor.
+	await site.php( `update_option( 'site_dispatch_recalled', '0.1.3' ); return true;` );
+	await site.php( `delete_option( 'site_dispatch_update' ); add_option( 'site_dispatch_update', array( 'manifest' => base64_encode( '{}' ), 'sig' => base64_encode( str_repeat( 'x', 64 ) ), 'version' => '0.1.2', 'first_seen' => 1 ), '', false ); return true;` );
+	release.remove();
+	await check();
+	assert.equal( await site.php( `wp_cache_flush(); return get_option( 'site_dispatch_recalled', null );` ), '0.1.3' );
 } );
 
 test( 'a release of the installed version stores nothing and leaves no mark', async () => {
