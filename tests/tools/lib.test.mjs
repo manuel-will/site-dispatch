@@ -140,8 +140,10 @@ test( 'release: the commit gives the same file set as the folder, nothing from t
 
 test( 'release: a folder outside the release set stops the build', () => {
 	// The export of this repository itself (HEAD) holds nothing but the release set. This is the
-	// check that found qa/ inside the pilot ZIP on 2026-10-04.
-	assert.doesNotThrow( () => checkReleaseSet( filesFromCommit( ROOT ) ) );
+	// check that found qa/ inside the pilot ZIP on 2026-10-04. The red-run copy has no .git.
+	if ( fs.existsSync( path.join( ROOT, '.git' ) ) ) {
+		assert.doesNotThrow( () => checkReleaseSet( filesFromCommit( ROOT ) ) );
+	}
 	const repo = makeRepo();
 	try {
 		// The throwaway repository carries the real .gitattributes, so the folder has to be one
