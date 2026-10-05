@@ -57,6 +57,10 @@ function site_dispatch_notices(): array {
 			'type' => 'success',
 			'text' => __( 'Saved.', 'site-dispatch' ),
 		),
+		'connected'      => array(
+			'type' => 'success',
+			'text' => __( 'Connected. The first report is sent within a few minutes.', 'site-dispatch' ),
+		),
 	);
 }
 
@@ -138,7 +142,7 @@ function site_dispatch_admin_assets( string $hook ): void {
 		'siteDispatchAdmin',
 		array(
 			'ajaxUrl'     => admin_url( 'admin-ajax.php' ),
-			'pageUrl'     => site_dispatch_page_url(),
+			'pageUrl'     => site_dispatch_page_url( 'connected' ),
 			'nonce'       => wp_create_nonce( 'site_dispatch_redeem' ),
 			'interval'    => SITE_DISPATCH_POLL_INTERVAL,
 			'maxTime'     => SITE_DISPATCH_POLL_MAX,

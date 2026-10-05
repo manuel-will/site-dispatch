@@ -157,6 +157,20 @@ test( 'redeem through ajax connects the site', async () => {
 	assert.ok( ! page.body.includes( 'assets/admin.js' ), 'no polling once connected' );
 } );
 
+test( 'connected site is greeted with a notice', async () => {
+	// Pilot feedback: after the key arrived the page looked like before. The polling script
+	// reloads the page with a notice code, and the page shows a success notice for it.
+	await connectThroughForm();
+	const open = await site.fetch( admin, PAGE );
+	assert.ok( open.body.includes( 'site_dispatch_notice=connected' ), 'the polling script reloads the page with the notice code' );
+
+	fake.approve();
+	await act( admin, ACTIONS[ 2 ], await site.nonce( admin, 'site_dispatch_redeem' ) );
+	const page = await site.fetch( admin, PAGE + '&site_dispatch_notice=connected' );
+	assert.ok( page.body.includes( 'notice-success' ) );
+	assert.ok( page.body.includes( 'Connected. The first report is sent within a few minutes.' ) );
+} );
+
 test( 'host with spaces around it is accepted', async () => {
 	await connectThroughForm( '  ' + SERVER_HOST + '  ' );
 	assert.equal( fake.to( '/webhook/site-dispatch-enroll-request' ).length, 1 );
