@@ -18,7 +18,13 @@ const root = process.env.SITE_DISPATCH_TEST_SOURCE
 
 export const SERVER_HOST = 'server.example.test';
 export const PLUGIN_FILE = 'site-dispatch/site-dispatch.php';
-export const PLUGIN_VERSION = '0.1.0';
+// The version the tests expect is the one of the source under test. A fixed value here went
+// stale with the first release that only raised the version (0.1.2, phase 8).
+const versionLine = fs.readFileSync( path.join( root, 'site-dispatch.php' ), 'utf8' ).match( /^const SITE_DISPATCH_VERSION = '([0-9]+\.[0-9]+\.[0-9]+)';$/m );
+if ( ! versionLine ) {
+	throw new Error( 'SITE_DISPATCH_VERSION not found in site-dispatch.php' );
+}
+export const PLUGIN_VERSION = versionLine[ 1 ];
 export const SOURCE_ROOT = root;
 
 const SOURCE_IN_SITE = '/tmp/site-dispatch-src';
