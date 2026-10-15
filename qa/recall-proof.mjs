@@ -93,19 +93,33 @@ function latestVersion( text ) {
 	}
 }
 
-function pilotCheck() {
-	const out = run( 'node', [ path.join( here, 'pilot-instance.mjs' ), 'check', ...stateArgs ], { capture: true } );
-	process.stdout.write( out );
+function pilot( command, quiet = false ) {
+	const out = run( 'node', [ path.join( here, 'pilot-instance.mjs' ), command, ...stateArgs ], { capture: true } );
+	if ( ! quiet ) {
+		process.stdout.write( out );
+	}
 	const at = out.indexOf( '\n{' );
 	if ( -1 === at ) {
-		fail( 'the pilot printed no state.' );
+		fail( 'the pilot printed nothing readable for ' + command + '.' );
 	}
 	try {
 		return JSON.parse( out.slice( at + 1 ) );
 	} catch {
-		fail( 'the pilot state is not readable.' );
+		fail( 'the pilot answer for ' + command + ' is not readable.' );
 	}
 	return null;
+}
+
+function pilotCheck() {
+	return pilot( 'check' );
+}
+
+// What the pilot itself gets from GitHub. The cache of GitHub's CDN answers this machine and the
+// Playground differently for a while (seen 2026-10-15: this machine saw 0.1.3 again, the pilot
+// still 0.1.5), so the wait before each check asks the pilot, not GitHub directly.
+function pilotSees() {
+	const answer = pilot( 'fetch', true );
+	return { status: answer.code, version: 200 === answer.code ? latestVersion( answer.body ) : '' };
 }
 
 // Preflight: everything that would stop the chain halfway is checked before the first push.
@@ -170,11 +184,10 @@ git( [ 'push', 'origin', TAG ] );
 step( 'Publish' );
 run( 'node', [ path.join( repo, 'tools', 'finish-release.mjs' ), '--publish' ] );
 
-step( 'Wait until GitHub serves ' + version + ' as latest' );
-await waitFor( 'latest manifest', async () => {
-	const seen = await status( BASE + '/releases/latest/download/manifest.json' );
-	const got = latestVersion( seen.text );
-	return { ok: got === version, text: 'HTTP ' + seen.status + ', version ' + ( got || '(none)' ) };
+step( 'Wait until the pilot gets ' + version + ' as latest' );
+await waitFor( 'latest as the pilot sees it', async () => {
+	const seen = pilotSees();
+	return { ok: seen.version === version, text: 'HTTP ' + seen.status + ', version ' + ( seen.version || '(none)' ) };
 } );
 
 step( 'Pilot check 1: the update should wait' );
@@ -193,10 +206,9 @@ await waitFor( 'release page', async () => {
 	const seen = await status( BASE + '/releases/tag/' + TAG, 'HEAD' );
 	return { ok: 404 === seen.status, text: 'HTTP ' + seen.status };
 } );
-await waitFor( 'latest manifest', async () => {
-	const seen = await status( BASE + '/releases/latest/download/manifest.json' );
-	const got = latestVersion( seen.text );
-	return { ok: got === latestBefore, text: 'HTTP ' + seen.status + ', version ' + ( got || '(none)' ) };
+await waitFor( 'latest as the pilot sees it', async () => {
+	const seen = pilotSees();
+	return { ok: seen.version === latestBefore, text: 'HTTP ' + seen.status + ', version ' + ( seen.version || '(none)' ) };
 } );
 
 step( 'Pilot check 2: the waiting update should be dropped and the version recalled' );
