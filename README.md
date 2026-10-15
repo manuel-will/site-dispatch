@@ -40,6 +40,7 @@ node qa/red-runs.mjs --kinds=php,tools # red runs: one production mutation per t
 node qa/red-runs.mjs --kinds=integration --specs=update-check.test.mjs   # Playground red runs, one file
 node qa/static-red-runs.mjs            # red runs for the static and admin.js tests, about a minute
 node qa/pilot-instance.mjs <command>   # a local Playground site running a real release against GitHub
+node qa/recall-proof.mjs <version>     # publish, let the pilot see it, delete, show the recall; burns the version
 ```
 
 Red runs prove that every test can fail: `qa/red-runs-mutations.mjs` holds one realistic bug per
